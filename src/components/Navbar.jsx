@@ -74,15 +74,15 @@ export default function Navbar() {
           <div className="flex items-center gap-3">
             <button
               onClick={() => setIsMenuOpen(!isMenuOpen)}
-              className="p-2 rounded-xl bg-slate-900 border border-slate-800 hover:border-[#39FF14]/40 text-slate-300 hover:text-[#39FF14] transition-all flex items-center justify-center group shadow-sm cursor-pointer"
+              className="p-2 rounded-xl bg-slate-900 border border-slate-800 hover:border-[#06B6D4]/40 text-slate-300 hover:text-[#06B6D4] transition-all flex items-center justify-center group shadow-sm cursor-pointer"
               title="Open Navigation Menu"
             >
-              <Menu className="w-5 h-5 group-hover:scale-110 transition-transform text-[#39FF14]" />
+              <Menu className="w-5 h-5 group-hover:scale-110 transition-transform text-[#06B6D4]" />
             </button>
 
             <NavLink to="/dashboard" className="flex items-center gap-2.5 group">
               <div className="relative group transition-transform duration-300 group-hover:scale-105">
-                <div className="absolute -inset-0.5 rounded-xl bg-gradient-to-r from-[#39FF14] to-[#00CFFF] opacity-75 blur-sm group-hover:opacity-100 transition duration-300" />
+                <div className="absolute -inset-0.5 rounded-xl bg-gradient-to-r from-[#06B6D4] to-[#3B82F6] opacity-75 blur-sm group-hover:opacity-100 transition duration-300" />
                 <img
                   src="/assets/fitgen_logo.png"
                   alt="FitGen Logo"
@@ -90,8 +90,8 @@ export default function Navbar() {
                 />
               </div>
               <div>
-                <span className="text-lg font-bold font-heading bg-gradient-to-r from-white via-slate-100 to-[#39FF14] bg-clip-text text-transparent">
-                  FitGen <span className="text-[#39FF14] text-[10px] px-1.5 py-0.5 rounded bg-[#39FF14]/15 border border-[#39FF14]/30 font-extrabold">PRO</span>
+                <span className="text-lg font-bold font-heading bg-gradient-to-r from-white via-slate-100 to-[#06B6D4] bg-clip-text text-transparent">
+                  FitGen <span className="text-[#06B6D4] text-[10px] px-1.5 py-0.5 rounded bg-[#06B6D4]/15 border border-[#06B6D4]/30 font-extrabold">PRO</span>
                 </span>
                 <p className="text-[9px] text-slate-400 font-medium tracking-wide">SMART NUTRITION</p>
               </div>
@@ -106,7 +106,7 @@ export default function Navbar() {
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Search recipes, ingredients, macros..."
-              className="w-full pl-10 pr-4 py-2 text-sm bg-slate-900/90 border border-slate-800 rounded-xl text-slate-200 placeholder-slate-500 focus:outline-none focus:border-[#39FF14] focus:ring-1 focus:ring-[#39FF14] transition-all"
+              className="w-full pl-10 pr-4 py-2 text-sm bg-slate-900/90 border border-slate-800 rounded-xl text-slate-200 placeholder-slate-500 focus:outline-none focus:border-[#06B6D4] focus:ring-1 focus:ring-[#06B6D4] transition-all"
             />
           </form>
 
@@ -115,9 +115,9 @@ export default function Navbar() {
             {/* Quick AI Scanner Shortcut */}
             <NavLink
               to="/ingredient-scanner"
-              className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-xl bg-[#39FF14]/10 border border-[#39FF14]/30 text-[#39FF14] hover:bg-[#39FF14]/20 text-xs font-semibold transition-all group"
+              className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-xl bg-[#06B6D4]/10 border border-[#06B6D4]/30 text-[#06B6D4] hover:bg-[#06B6D4]/20 text-xs font-semibold transition-all group"
             >
-              <Scan className="w-3.5 h-3.5 text-[#39FF14] group-hover:scale-110 transition-transform" />
+              <Scan className="w-3.5 h-3.5 text-[#06B6D4] group-hover:scale-110 transition-transform" />
               <span>AI Scanner</span>
             </NavLink>
 
@@ -129,7 +129,7 @@ export default function Navbar() {
             >
               <ShoppingBag className="w-5 h-5" />
               {uncompletedGroceryCount > 0 && (
-                <span className="absolute -top-1 -right-1 w-5 h-5 rounded-full bg-[#39FF14] text-slate-950 font-bold text-[10px] flex items-center justify-center border-2 border-slate-950">
+                <span className="absolute -top-1 -right-1 w-5 h-5 rounded-full bg-[#06B6D4] text-slate-950 font-bold text-[10px] flex items-center justify-center border-2 border-slate-950">
                   {uncompletedGroceryCount}
                 </span>
               )}
@@ -142,7 +142,7 @@ export default function Navbar() {
                 className="p-2 sm:px-3 sm:py-1.5 rounded-xl text-slate-300 hover:text-white bg-slate-900 border border-slate-800 hover:border-slate-700 transition-all flex items-center gap-1.5 cursor-pointer shadow-sm"
                 title="Change Project Color Theme"
               >
-                <Palette className="w-4 h-4 text-emerald-400" />
+                <Palette className="w-4 h-4 text-cyan-400" />
                 <span className="hidden sm:inline text-xs font-bold capitalize">{currentTheme}</span>
               </button>
 
@@ -152,10 +152,10 @@ export default function Navbar() {
                     Select Project Theme
                   </div>
                   {[
-                    { name: 'emerald', label: '❇️ Cyber Emerald', color: '#10B981' },
+                    { name: 'emerald', label: '🌊 Sapphire Ocean', color: '#06B6D4' },
                     { name: 'cyberpunk', label: '🟣 Neon Cyberpunk', color: '#EC4899' },
                     { name: 'sunset', label: '🌅 Golden Sunset', color: '#F59E0B' },
-                    { name: 'ocean', label: '🌊 Sapphire Ocean', color: '#06B6D4' },
+                    { name: 'ocean', label: '🔷 Electric Cyan', color: '#3B82F6' },
                     { name: 'stealth', label: '🖤 Stealth Onyx', color: '#94A3B8' }
                   ].map((thm) => (
                     <button
@@ -184,17 +184,17 @@ export default function Navbar() {
               className="flex items-center gap-3 p-1 pl-2.5 rounded-xl bg-slate-900 border border-slate-800 hover:border-slate-700 transition-colors group"
             >
               <div className="hidden sm:block text-right">
-                <p className="text-xs font-semibold text-slate-200 group-hover:text-[#39FF14] transition-colors">
+                <p className="text-xs font-semibold text-slate-200 group-hover:text-[#06B6D4] transition-colors">
                   {userProfile.name}
                 </p>
-                <p className="text-[10px] text-[#39FF14] font-medium">
+                <p className="text-[10px] text-[#06B6D4] font-medium">
                   {userProfile.goal}
                 </p>
               </div>
               <img
                 src={userProfile.avatar}
                 alt={userProfile.name}
-                className="w-8 h-8 rounded-lg object-cover border border-[#39FF14]/40"
+                className="w-8 h-8 rounded-lg object-cover border border-[#06B6D4]/40"
               />
             </NavLink>
 
@@ -223,7 +223,7 @@ export default function Navbar() {
             <div>
               <div className="flex items-center justify-between pb-4 border-b border-white/10">
                 <div className="flex items-center gap-2.5">
-                  <div className="w-9 h-9 rounded-xl bg-[#39FF14]/15 border border-[#39FF14]/40 text-[#39FF14] flex items-center justify-center">
+                  <div className="w-9 h-9 rounded-xl bg-[#06B6D4]/15 border border-[#06B6D4]/40 text-[#06B6D4] flex items-center justify-center">
                     <Sparkles className="w-5 h-5" />
                   </div>
                   <div>
@@ -255,24 +255,24 @@ export default function Navbar() {
                       className={({ isActive }) =>
                         `flex items-center justify-between px-4 py-3 rounded-2xl text-sm font-semibold transition-all duration-200 group ${
                           isActive
-                            ? 'bg-gradient-to-r from-[#39FF14]/20 to-[#00CFFF]/10 text-[#39FF14] border border-[#39FF14]/40'
+                            ? 'bg-gradient-to-r from-[#06B6D4]/20 to-[#3B82F6]/10 text-[#06B6D4] border border-[#06B6D4]/40'
                             : 'text-slate-300 hover:text-white hover:bg-slate-800/80 border border-transparent'
                         }`
                       }
                     >
                       <div className="flex items-center gap-3">
-                        <Icon className="w-4 h-4 text-[#39FF14] group-hover:scale-110 transition-transform" />
+                        <Icon className="w-4 h-4 text-[#06B6D4] group-hover:scale-110 transition-transform" />
                         <span>{item.label}</span>
                       </div>
 
                       <div className="flex items-center gap-2">
                         {item.badge && (
-                          <span className="text-[10px] px-2 py-0.5 rounded-md font-bold bg-[#39FF14]/15 text-[#39FF14] border border-[#39FF14]/30">
+                          <span className="text-[10px] px-2 py-0.5 rounded-md font-bold bg-[#06B6D4]/15 text-[#06B6D4] border border-[#06B6D4]/30">
                             {item.badge}
                           </span>
                         )}
                         {item.count !== undefined && item.count > 0 && (
-                          <span className="w-5 h-5 rounded-full text-[11px] font-bold bg-[#00CFFF] text-slate-950 flex items-center justify-center">
+                          <span className="w-5 h-5 rounded-full text-[11px] font-bold bg-[#3B82F6] text-white flex items-center justify-center">
                             {item.count}
                           </span>
                         )}
@@ -289,7 +289,7 @@ export default function Navbar() {
                 <img
                   src={userProfile.avatar}
                   alt={userProfile.name}
-                  className="w-10 h-10 rounded-xl object-cover border border-[#39FF14]/50"
+                  className="w-10 h-10 rounded-xl object-cover border border-[#06B6D4]/50"
                 />
                 <div className="flex-1 truncate">
                   <p className="text-xs font-bold text-slate-200 truncate">{userProfile.name}</p>
