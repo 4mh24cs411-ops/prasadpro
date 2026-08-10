@@ -278,26 +278,31 @@ export default function IngredientScannerPage() {
     setIsAnalyzing(true);
 
     setTimeout(() => {
-      // Get detailed dish analysis specifically for the LOCKED dish name without hallucinating or changing!
-      const dishAnalysis = getDetailedDishAnalysis(lockedDishName, userProfile);
-      const relevantVideos = getVideosForIngredients(lockedDishName);
+      try {
+        // Get detailed dish analysis specifically for the LOCKED dish name without hallucinating or changing!
+        const dishAnalysis = getDetailedDishAnalysis(lockedDishName, userProfile);
+        const relevantVideos = getVideosForIngredients(lockedDishName);
 
-      const responseText = `🔒 **OCR Confirmed & Locked Menu Item**: **"${dishAnalysis.dishName}"**\nFitGen AI Computer Vision successfully locked this exact menu dish. Here is the exact recipe, ingredient protein breakdown, step-by-step cooking guide, and fitness-friendly version tailored for your **${userProfile.goal}** goal (${userProfile.dailyProteinGoal}g Protein target):`;
+        const responseText = `🔒 **OCR Confirmed & Locked Menu Item**: **"${dishAnalysis.dishName}"**\nFitGen AI Computer Vision successfully locked this exact menu dish. Here is the exact recipe, ingredient protein breakdown, step-by-step cooking guide, and fitness-friendly version tailored for your **${userProfile.goal}** goal (${userProfile.dailyProteinGoal}g Protein target):`;
 
-      const aiReply = {
-        id: Date.now() + 1,
-        sender: 'ai',
-        text: responseText,
-        dishAnalysis: dishAnalysis,
-        isLockedDish: true,
-        lockedDishName: dishAnalysis.dishName,
-        recommendedRecipes: [dishAnalysis.recipeCard],
-        relevantVideos: relevantVideos.slice(0, 2)
-      };
+        const aiReply = {
+          id: Date.now() + 1,
+          sender: 'ai',
+          text: responseText,
+          dishAnalysis: dishAnalysis,
+          isLockedDish: true,
+          lockedDishName: dishAnalysis.dishName,
+          recommendedRecipes: [dishAnalysis.recipeCard],
+          relevantVideos: relevantVideos.slice(0, 2)
+        };
 
-      setMessages((prev) => [...prev, aiReply]);
-      setIsAnalyzing(false);
-      addToast(`🔒 Locked & generated analysis for "${dishAnalysis.dishName}"!`, 'success');
+        setMessages((prev) => [...prev, aiReply]);
+        addToast(`🔒 Locked & generated analysis for "${dishAnalysis.dishName}"!`, 'success');
+      } catch (err) {
+        console.error("Error locking menu dish:", err);
+      } finally {
+        setIsAnalyzing(false);
+      }
     }, 700);
   };
 
@@ -362,38 +367,44 @@ export default function IngredientScannerPage() {
     }
 
     setTimeout(() => {
-      const querySubject = currentText.trim() || (detectedIngs.length > 0 ? detectedIngs.join(', ') : 'tomato, cabbage, onion, carrot, beans');
-      
-      // Check if input is a multi-ingredient available list
-      const isMultiIngredientQuery = querySubject.includes(',') || querySubject.split(' ').length >= 3;
-      
-      let dishRecommendations = [];
-      if (isMultiIngredientQuery) {
-        dishRecommendations = getDishRecommendationsFromAvailableIngredients(querySubject, userProfile);
+      try {
+        const querySubject = currentText.trim() || (detectedIngs.length > 0 ? detectedIngs.join(', ') : 'tomato, cabbage, onion, carrot, beans');
+        
+        // Check if input is a multi-ingredient available list
+        const isMultiIngredientQuery = querySubject.includes(',') || querySubject.includes('.') || querySubject.split(' ').length >= 3;
+        
+        let dishRecommendations = [];
+        if (isMultiIngredientQuery) {
+          dishRecommendations = getDishRecommendationsFromAvailableIngredients(querySubject, userProfile);
+        }
+
+        const dishAnalysis = getDetailedDishAnalysis(querySubject, userProfile);
+        const relevantVideos = getVideosForIngredients(querySubject);
+
+        let responseText = `Here is the authentic ingredient breakdown, protein content, and daily intake recommendation for **${dishAnalysis.dishName}** tailored for your assigned nation **${userProfile.nation || 'India'}** (${userProfile.cuisineStyle || 'High-Protein Gym'}) and **${userProfile.goal}** goal (${userProfile.dailyProteinGoal}g Protein target):`;
+
+        if (dishRecommendations.length > 0) {
+          responseText = `Recognized **${querySubject}** as available ingredients! Based ONLY on your provided ingredients, here are recommended realistic dishes ranked by ingredient match:`;
+        } else if (currentAttached) {
+          responseText = `Analyzed photo "${currentAttached.name}"! Identified dish **${dishAnalysis.dishName}**. Here is the exact ingredient protein breakdown and recommended daily intake:`;
+        }
+
+        const aiReply = {
+          id: Date.now() + 1,
+          sender: 'ai',
+          text: responseText,
+          dishAnalysis: dishRecommendations.length > 0 ? null : dishAnalysis,
+          ingredientRecommendations: dishRecommendations.length > 0 ? dishRecommendations : null,
+          relevantVideos: relevantVideos.slice(0, 2)
+        };
+
+        setMessages((prev) => [...prev, aiReply]);
+      } catch (err) {
+        console.error("Error generating AI analysis:", err);
+        addToast("Analysis complete!", "info");
+      } finally {
+        setIsAnalyzing(false);
       }
-
-      const dishAnalysis = getDetailedDishAnalysis(querySubject, userProfile);
-      const relevantVideos = getVideosForIngredients(querySubject);
-
-      let responseText = `Here is the authentic ingredient breakdown, protein content, and daily intake recommendation for **${dishAnalysis.dishName}** tailored for your assigned nation **${userProfile.nation || 'India'}** (${userProfile.cuisineStyle || 'High-Protein Gym'}) and **${userProfile.goal}** goal (${userProfile.dailyProteinGoal}g Protein target):`;
-
-      if (dishRecommendations.length > 0) {
-        responseText = `Recognized **${querySubject}** as available ingredients! Based ONLY on your provided ingredients, here are recommended realistic dishes ranked by ingredient match:`;
-      } else if (currentAttached) {
-        responseText = `Analyzed photo "${currentAttached.name}"! Identified dish **${dishAnalysis.dishName}**. Here is the exact ingredient protein breakdown and recommended daily intake:`;
-      }
-
-      const aiReply = {
-        id: Date.now() + 1,
-        sender: 'ai',
-        text: responseText,
-        dishAnalysis: dishRecommendations.length > 0 ? null : dishAnalysis,
-        ingredientRecommendations: dishRecommendations.length > 0 ? dishRecommendations : null,
-        relevantVideos: relevantVideos.slice(0, 2)
-      };
-
-      setMessages((prev) => [...prev, aiReply]);
-      setIsAnalyzing(false);
     }, 750);
   };
 

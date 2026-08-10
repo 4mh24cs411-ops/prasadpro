@@ -589,17 +589,36 @@ export function getDishRecommendationsFromAvailableIngredients(rawIngredientsTex
     return [];
   }
 
-  // Parse user's available ingredients
-  const availableTokens = rawIngredientsText
+  // Parse user's available ingredients with robust delimiter regex including dots, commas, slashes, pluses, semicolons, and spaces
+  const rawTokens = rawIngredientsText
     .toLowerCase()
-    .split(/[\n,;+&]+/)
+    .split(/[\n,;+&.\/\\:]+/)
     .map(t => t.trim())
     .filter(Boolean);
 
+  const availableTokens = [];
+  rawTokens.forEach(t => {
+    const sub = t.split(/\s+/).filter(s => s.length > 1);
+    if (sub.length > 1) {
+      availableTokens.push(t);
+      sub.forEach(s => availableTokens.push(s));
+    } else if (t.length > 1) {
+      availableTokens.push(t);
+    }
+  });
+
+  const uniqueTokens = Array.from(new Set(availableTokens));
   const goal = userProfile?.goal || 'Muscle Gain';
 
   const INGREDIENT_META = {
     tomato: { name: 'Fresh Tomatoes', icon: '🍅', amount: '2 medium (150g)', protein: 1.5, calories: 28 },
+    curd: { name: 'Fresh Curd / Dahi', icon: '🥣', amount: '200g', protein: 7.0, calories: 120 },
+    yogurt: { name: 'Greek Yogurt', icon: '🥣', amount: '180g', protein: 18.0, calories: 130 },
+    nuts: { name: 'Mixed Almonds & Cashews', icon: '🥜', amount: '30g', protein: 6.0, calories: 170 },
+    nut: { name: 'Mixed Nuts', icon: '🥜', amount: '30g', protein: 6.0, calories: 170 },
+    oil: { name: 'Cold-Pressed Cooking Oil', icon: '🫒', amount: '1 tsp', protein: 0.0, calories: 45 },
+    salt: { name: 'Himalayan Pink Salt', icon: '🧂', amount: '1 pinch', protein: 0.0, calories: 0 },
+    pepper: { name: 'Fresh Black Pepper', icon: '🌶️', amount: '1/2 tsp', protein: 0.2, calories: 5 },
     cabbage: { name: 'Shredded Cabbage', icon: '🥬', amount: '1.5 cups (150g)', protein: 1.9, calories: 38 },
     onion: { name: 'Sliced Onions', icon: '🧅', amount: '1 large (120g)', protein: 1.4, calories: 48 },
     carrot: { name: 'Diced Carrots', icon: '🥕', amount: '1 cup (120g)', protein: 1.1, calories: 42 },
@@ -620,15 +639,20 @@ export function getDishRecommendationsFromAvailableIngredients(rawIngredientsTex
   };
 
   const userMatchedItems = [];
-  availableTokens.forEach(tok => {
+  const processedKeys = new Set();
+
+  uniqueTokens.forEach(tok => {
     let matchedKey = Object.keys(INGREDIENT_META).find(k => tok.includes(k) || k.includes(tok));
-    if (matchedKey) {
+    if (matchedKey && !processedKeys.has(matchedKey)) {
+      processedKeys.add(matchedKey);
       userMatchedItems.push({ key: matchedKey, userText: tok, ...INGREDIENT_META[matchedKey] });
-    } else {
+    } else if (!matchedKey && !processedKeys.has(tok)) {
+      processedKeys.add(tok);
+      const cleanName = tok.charAt(0).toUpperCase() + tok.slice(1);
       userMatchedItems.push({
         key: tok,
         userText: tok,
-        name: tok.charAt(0).toUpperCase() + tok.slice(1),
+        name: cleanName,
         icon: '🥗',
         amount: '1 portion (100g)',
         protein: 2.0,
@@ -638,8 +662,8 @@ export function getDishRecommendationsFromAvailableIngredients(rawIngredientsTex
   });
 
   const dish1Used = userMatchedItems.map(i => ({ ...i }));
-  const dish1Protein = Math.round((dish1Used.reduce((sum, item) => sum + item.protein, 0) + 2.0) * 10) / 10;
-  const dish1Calories = Math.round(dish1Used.reduce((sum, item) => sum + item.calories, 0) + 45);
+  const dish1Protein = Math.round((dish1Used.reduce((sum, item) => sum + item.protein, 0)) * 10) / 10;
+  const dish1Calories = Math.round(dish1Used.reduce((sum, item) => sum + item.calories, 0));
 
   let fitgenGoalAdvice1 = 'Balanced high-fiber recipe.';
   if (goal === 'Muscle Gain') {
