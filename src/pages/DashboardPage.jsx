@@ -15,13 +15,11 @@ import {
   Calendar,
   Utensils,
   ChevronRight,
-  Heart,
-  Palette,
-  Check
+  Heart
 } from 'lucide-react';
 
 export default function DashboardPage() {
-  const { userProfile, dailyLog, addWater, mealPlan, logMealToTracker, currentTheme, changeTheme } = useApp();
+  const { userProfile, dailyLog, addWater, mealPlan, logMealToTracker } = useApp();
 
   const caloriePercentage = Math.min(100, Math.round((dailyLog.calories / userProfile.dailyCalorieBudget) * 100));
   const proteinPercentage = Math.min(100, Math.round((dailyLog.protein / userProfile.dailyProteinGoal) * 100));
@@ -99,64 +97,6 @@ export default function DashboardPage() {
               <Utensils className="w-4 h-4 text-emerald-400" /> Scan Fridge
             </NavLink>
           </div>
-        </div>
-      </div>
-
-      {/* FitGen Project Theme Color Customizer */}
-      <div className="rounded-3xl bg-slate-900/90 border border-slate-800 p-6 space-y-4 shadow-xl">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 flex items-center justify-center shrink-0">
-              <Palette className="w-5 h-5" />
-            </div>
-            <div>
-              <h3 className="text-base font-extrabold text-white font-heading flex items-center gap-2">
-                🎨 FitGen Project Theme Color Customizer
-              </h3>
-              <p className="text-xs text-slate-400">
-                Select your preferred visual theme palette to customize buttons, glowing accents & charts across the entire workspace.
-              </p>
-            </div>
-          </div>
-
-          <span className="self-start sm:self-auto px-3 py-1 rounded-xl bg-slate-800 border border-slate-700 text-xs font-bold text-slate-300 capitalize">
-            Active: {currentTheme}
-          </span>
-        </div>
-
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3 pt-1">
-          {[
-            { name: 'emerald', label: '❇️ Cyber Emerald', desc: 'Neon Green & Teal', color: '#10B981' },
-            { name: 'cyberpunk', label: '🟣 Neon Cyberpunk', desc: 'Electric Pink & Cyan', color: '#EC4899' },
-            { name: 'sunset', label: '🌅 Golden Sunset', desc: 'Amber & Warm Flame', color: '#F59E0B' },
-            { name: 'ocean', label: '🌊 Sapphire Ocean', desc: 'Deep Cyan & Electric Blue', color: '#06B6D4' },
-            { name: 'stealth', label: '🖤 Stealth Onyx', desc: 'Monochrome Silver & Slate', color: '#94A3B8' }
-          ].map((thm) => {
-            const isSelected = currentTheme === thm.name;
-            return (
-              <button
-                key={thm.name}
-                onClick={() => changeTheme(thm.name)}
-                className={`p-3.5 rounded-2xl text-left transition-all border cursor-pointer flex flex-col justify-between space-y-2 group ${
-                  isSelected
-                    ? 'bg-slate-800 border-emerald-500/60 shadow-lg ring-2 ring-emerald-500/30 scale-102'
-                    : 'bg-slate-950/80 border-slate-800/80 hover:border-slate-700 hover:bg-slate-900'
-                }`}
-              >
-                <div className="flex items-center justify-between">
-                  <span className="w-4 h-4 rounded-full border border-white/20 shadow-md" style={{ backgroundColor: thm.color }} />
-                  {isSelected && <Check className="w-4 h-4 text-emerald-400" />}
-                </div>
-
-                <div>
-                  <h4 className="text-xs font-extrabold text-white group-hover:text-emerald-400 transition-colors">
-                    {thm.label}
-                  </h4>
-                  <p className="text-[10px] text-slate-400 mt-0.5">{thm.desc}</p>
-                </div>
-              </button>
-            );
-          })}
         </div>
       </div>
 
