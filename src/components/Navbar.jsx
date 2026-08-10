@@ -48,8 +48,7 @@ export default function Navbar() {
   const navItems = [
     { path: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
     { path: '/meal-planner', label: 'Meal Planner', icon: CalendarDays, badge: 'AI' },
-    { path: '/ingredient-scanner', label: 'Ingredient Scanner', icon: Scan, badge: 'OCR' },
-    { path: '/recipes', label: 'Recipe Generator', icon: UtensilsCrossed },
+    { path: '/ingredient-scanner', label: 'AI Ingredient & Recipe Scanner', icon: Scan, badge: 'OCR' },
     {
       path: '/grocery',
       label: 'Grocery List',

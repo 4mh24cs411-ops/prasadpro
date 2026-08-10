@@ -32,7 +32,7 @@ export default function App() {
         <Route path="/meal-planner" element={<MealPlannerPage />} />
         <Route path="/ingredient-scanner" element={<IngredientScannerPage />} />
         <Route path="/nutrition-videos" element={<NutritionVideosPage />} />
-        <Route path="/recipes" element={<RecipesPage />} />
+        <Route path="/recipes" element={<Navigate to="/ingredient-scanner" replace />} />
         <Route path="/grocery" element={<GroceryListPage />} />
         <Route path="/tracker" element={<NutritionTrackerPage />} />
         <Route path="/profile" element={<ProfilePage />} />

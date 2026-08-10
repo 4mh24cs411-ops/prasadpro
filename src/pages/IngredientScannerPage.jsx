@@ -500,13 +500,6 @@ export default function IngredientScannerPage() {
               <span className="hidden sm:inline">Clear Chat</span>
             </button>
           )}
-
-          <button
-            onClick={() => navigate('/recipes')}
-            className="px-3.5 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 font-bold text-xs flex items-center gap-1.5 transition-all hidden md:flex cursor-pointer whitespace-nowrap"
-          >
-            <Utensils className="w-3.5 h-3.5 text-emerald-400" /> Recipes
-          </button>
         </div>
       </div>
 
