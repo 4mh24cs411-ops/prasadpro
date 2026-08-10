@@ -655,11 +655,14 @@ export function getDishRecommendationsFromAvailableIngredients(rawIngredientsTex
   const recommendations = [];
 
   // Candidate 1: Mix Vegetable Poriyal / Sauté
+  const poriyalVideos = getVideosForIngredients('poriyal');
   recommendations.push({
     id: `rec-dish-1-${Date.now()}`,
     dishName: `South Indian Mix Vegetable Sauté (Poriyal)`,
     cuisine: 'South Indian',
     dietary: 'Vegetarian / Vegan',
+    image: 'https://images.unsplash.com/photo-1540420773420-3366772f4999?auto=format&fit=crop&w=800&q=80',
+    video: poriyalVideos[0] || null,
     matchScore: {
       usedCount: dish1Used.length,
       totalAvailable: availableTokens.length,
@@ -682,6 +685,9 @@ export function getDishRecommendationsFromAvailableIngredients(rawIngredientsTex
       fat: Math.round(dish1Calories * 0.20 / 9),
       fiber: 9.5
     },
+    fitnessGoalReason: goal === 'Weight Loss'
+      ? 'High-volume low-calorie sauté that suppresses hunger hormones while providing vital micronutrients for fat loss.'
+      : 'Nutrient-dense vegetable volume that aids digestion and fuels steady lean muscle growth.',
     fitgenGoalVersion: fitgenGoalAdvice1,
     instructions: [
       { step: 1, title: 'Wash & Chop Veggies', description: `Finely chop ${dish1Used.map(i => i.name).join(', ')}.`, timerSeconds: 300 },
@@ -692,11 +698,14 @@ export function getDishRecommendationsFromAvailableIngredients(rawIngredientsTex
   });
 
   // Candidate 2: Desi Mixed Veg Curry / Kurma
+  const kurmaVideos = getVideosForIngredients('kurma');
   recommendations.push({
     id: `rec-dish-2-${Date.now()}`,
     dishName: `Authentic Desi Mixed Vegetable Curry`,
     cuisine: 'North Indian',
     dietary: 'Vegetarian',
+    image: 'https://images.unsplash.com/photo-1631452180519-c014fe946bc7?auto=format&fit=crop&w=800&q=80',
+    video: kurmaVideos[0] || null,
     matchScore: {
       usedCount: dish1Used.length,
       totalAvailable: availableTokens.length,
@@ -719,6 +728,7 @@ export function getDishRecommendationsFromAvailableIngredients(rawIngredientsTex
       fat: Math.round((dish1Calories + 70) * 0.25 / 9),
       fiber: 10.0
     },
+    fitnessGoalReason: 'Combines anti-inflammatory turmeric and ginger with high-fiber veggies to boost immunity and sustain muscle recovery.',
     fitgenGoalVersion: fitgenGoalAdvice1,
     instructions: [
       { step: 1, title: 'Blend Gravy Base', description: 'Sauté onions, garlic, and tomatoes. Blend into a smooth gravy paste.', timerSeconds: 360 },
@@ -728,11 +738,14 @@ export function getDishRecommendationsFromAvailableIngredients(rawIngredientsTex
   });
 
   // Candidate 3: Clear Garden Vegetable Detox Soup
+  const soupVideos = getVideosForIngredients('soup');
   recommendations.push({
     id: `rec-dish-3-${Date.now()}`,
     dishName: `Clear Garden Vegetable Detox Soup`,
     cuisine: 'Global Health',
     dietary: 'Vegan',
+    image: 'https://images.unsplash.com/photo-1547592166-23ac45744acd?auto=format&fit=crop&w=800&q=80',
+    video: soupVideos[0] || null,
     matchScore: {
       usedCount: dish1Used.length,
       totalAvailable: availableTokens.length,
@@ -754,11 +767,51 @@ export function getDishRecommendationsFromAvailableIngredients(rawIngredientsTex
       fat: 2,
       fiber: 7.5
     },
+    fitnessGoalReason: 'Ultra-low calorie density broth that flushes excess sodium, supports gut health, and accelerates fat burning.',
     fitgenGoalVersion: '🔥 FitGen Weight Loss & Fat Shred Version: Ultra-low calorie high-hydration soup for instant satiety.',
     instructions: [
       { step: 1, title: 'Dice Veggies', description: `Dice ${dish1Used.map(i => i.name).join(', ')} into small cubes.`, timerSeconds: 240 },
       { step: 2, title: 'Simmer Broth', description: 'Bring vegetable broth to boil. Add garlic, veggies, salt, and black pepper.', timerSeconds: 480 },
       { step: 3, title: 'Garnish', description: 'Squeeze fresh lemon juice, garnish with cilantro, and serve piping hot!', timerSeconds: 60 }
+    ]
+  });
+
+  // Candidate 4: Tossed Vegetable Basmati Fried Rice
+  const riceVideos = getVideosForIngredients('rice');
+  recommendations.push({
+    id: `rec-dish-4-${Date.now()}`,
+    dishName: `High-Protein Tossed Vegetable Basmati Rice`,
+    cuisine: 'Indo-Asian',
+    dietary: 'Vegetarian',
+    image: 'https://images.unsplash.com/photo-1603133872878-684f208fb84b?auto=format&fit=crop&w=800&q=80',
+    video: riceVideos[0] || null,
+    matchScore: {
+      usedCount: Math.max(1, dish1Used.length - 1),
+      totalAvailable: availableTokens.length,
+      percentage: 80
+    },
+    availableIngredientsUsed: dish1Used.slice(0, 4),
+    optionalIngredients: [
+      { name: 'Cooked Basmati / Brown Rice', icon: '🍚', amount: '1.5 cups', note: 'Carb base' },
+      { name: 'Soy Sauce & Black Pepper', icon: '🥢', amount: '1 tbsp', note: 'Sauce' },
+      { name: 'Cold-Pressed Sesame Oil', icon: '🫒', amount: '1 tsp', note: 'Wok stir fry' }
+    ],
+    prepTime: '10 mins',
+    cookTime: '8 mins',
+    servingSize: '1.5 bowls (350g)',
+    macros: {
+      calories: dish1Calories + 120,
+      protein: dish1Protein + 4.5,
+      carbs: Math.round((dish1Calories + 120) * 0.65 / 4),
+      fat: 6,
+      fiber: 6.0
+    },
+    fitnessGoalReason: 'Ideal post-workout glycogen replenishment meal that restores energy reserves while supplying high vegetable fiber.',
+    fitgenGoalVersion: '💪 FitGen Glycogen Refuel Version: Pair with 2 scrambled egg whites or tofu for post-training muscle building.',
+    instructions: [
+      { step: 1, title: 'Wok Sauté Veggies', description: `High-heat sauté ${dish1Used.slice(0, 4).map(i => i.name).join(', ')} in sesame oil for 3 mins.`, timerSeconds: 180 },
+      { step: 2, title: 'Toss Rice & Seasoning', description: 'Add cooked Basmati rice, soy sauce, and black pepper. Stir-fry rapidly for 4 mins.', timerSeconds: 240 },
+      { step: 3, title: 'Serve Hot', description: 'Garnish with spring onions and enjoy hot!', timerSeconds: 60 }
     ]
   });
 

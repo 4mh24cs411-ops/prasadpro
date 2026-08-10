@@ -612,6 +612,64 @@ export default function IngredientScannerPage() {
                             </div>
                           </div>
 
+                          {/* Dish Image & Dedicated Video Masterclass */}
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pt-1">
+                            {/* Dish Photo */}
+                            <div className="relative rounded-xl overflow-hidden border border-slate-800 h-36">
+                              <img
+                                src={dish.image || 'https://images.unsplash.com/photo-1540420773420-3366772f4999?auto=format&fit=crop&w=800&q=80'}
+                                alt={dish.dishName}
+                                className="w-full h-full object-cover"
+                              />
+                              <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-transparent to-transparent p-2.5 flex items-end justify-between">
+                                <span className="text-[11px] font-bold text-white bg-slate-900/80 px-2 py-0.5 rounded-md backdrop-blur-sm border border-slate-700">
+                                  📷 {dish.dishName}
+                                </span>
+                                <span className="text-[10px] text-emerald-400 font-extrabold bg-slate-950/90 px-2 py-0.5 rounded-md border border-emerald-500/30">
+                                  {dish.macros.protein}g Protein
+                                </span>
+                              </div>
+                            </div>
+
+                            {/* Dedicated Video Card */}
+                            {dish.video && (
+                              <div className="p-2.5 rounded-xl bg-slate-900 border border-slate-800 flex flex-col justify-between space-y-2">
+                                <div className="flex items-center gap-2">
+                                  <Video className="w-4 h-4 text-emerald-400 shrink-0" />
+                                  <p className="text-xs font-bold text-slate-200 line-clamp-1">{dish.video.title}</p>
+                                </div>
+                                <div className="relative rounded-lg overflow-hidden h-20 border border-slate-800">
+                                  <img src={dish.video.thumbnail} alt={dish.video.title} className="w-full h-full object-cover" />
+                                  <a
+                                    href={dish.video.youtubeUrl}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="absolute inset-0 bg-slate-950/40 hover:bg-slate-950/20 transition-all flex items-center justify-center group"
+                                  >
+                                    <div className="w-8 h-8 rounded-full bg-emerald-500 text-slate-950 flex items-center justify-center group-hover:scale-110 transition-transform shadow-lg">
+                                      <Play className="w-4 h-4 fill-slate-950 ml-0.5" />
+                                    </div>
+                                  </a>
+                                </div>
+                                <div className="flex items-center justify-between text-[10px] text-slate-400">
+                                  <span>📺 {dish.video.channel}</span>
+                                  <span className="text-emerald-400 font-bold">⏱️ {dish.video.duration}</span>
+                                </div>
+                              </div>
+                            )}
+                          </div>
+
+                          {/* Fitness Goal Suitability Reason */}
+                          {dish.fitnessGoalReason && (
+                            <div className="p-2.5 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-xs text-emerald-300 flex items-start gap-2">
+                              <Target className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
+                              <div>
+                                <span className="font-extrabold text-emerald-400">Why this fits your {userProfile?.goal || 'Fitness'} Goal: </span>
+                                <span>{dish.fitnessGoalReason}</span>
+                              </div>
+                            </div>
+                          )}
+
                           {/* Available Ingredients Used Badges */}
                           <div className="space-y-1.5">
                             <span className="text-[11px] font-bold text-emerald-400 flex items-center gap-1">
@@ -653,7 +711,7 @@ export default function IngredientScannerPage() {
                             </div>
                           )}
 
-                          {/* Action Button: Generate Complete Recipe */}
+                          {/* Action Button: View Complete Step-by-Step Recipe */}
                           <div className="pt-1 flex items-center justify-between border-t border-slate-800/80">
                             <div className="flex items-center gap-3 text-xs text-slate-400 font-semibold">
                               <span>⏱️ Prep: {dish.prepTime}</span>
@@ -668,7 +726,7 @@ export default function IngredientScannerPage() {
                               className="px-4 py-2 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-400 hover:from-emerald-400 hover:to-teal-300 text-slate-950 font-extrabold text-xs flex items-center gap-1.5 transition-all shadow-md active:scale-95 cursor-pointer"
                             >
                               <Utensils className="w-3.5 h-3.5" />
-                              <span>👨‍🍳 Generate Complete Recipe</span>
+                              <span>👨‍🍳 View Complete Step-by-Step Recipe</span>
                             </button>
                           </div>
                         </div>
@@ -817,8 +875,8 @@ export default function IngredientScannerPage() {
                   </div>
                 )}
 
-                {/* Attached Relevant Nutrition & Cooking Videos Section */}
-                {msg.relevantVideos && msg.relevantVideos.length > 0 && (
+                {/* Attached Relevant Nutrition & Cooking Videos (for single dish queries) */}
+                {msg.relevantVideos && msg.relevantVideos.length > 0 && !msg.ingredientRecommendations && (
                   <div className="p-4 rounded-2xl bg-slate-900/90 border border-emerald-500/30 space-y-3 animate-in fade-in duration-300">
                     <div className="flex items-center justify-between border-b border-slate-800/80 pb-2.5">
                       <div className="flex items-center gap-2">

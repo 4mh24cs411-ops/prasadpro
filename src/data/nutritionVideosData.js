@@ -159,11 +159,77 @@ export const CURATED_NUTRITION_VIDEOS = [
     category: "Plant Protein",
     macros: { protein: "48g", calories: "310 kcal", carbs: "26g", fat: "2g" },
     nutritionHighlights: [
-      "Highest Protein Density per Rupee & per Calorie",
-      "Isoflavones & Fiber support arterial health",
-      "Proper boiling & rinsing method to remove anti-nutrients"
+      "Highest Protein Density per gram in plant foods (52% protein)",
+      "Zero Cholesterol & High Dietary Fiber",
+      "Complete Amino Acid profile for vegetarian muscle building"
     ],
-    summary: "Step-by-step guide to removing bitter soya taste and preparing juicy high-protein soya biryani/curry."
+    summary: "Complete guide to boiling, squeezing, and spice-marinating Soya Chunks for maximum protein absorption."
+  },
+  {
+    id: "vid-poriyal-01",
+    title: "South Indian Mix Vegetable Poriyal (Stir-Fry) Step-by-Step",
+    channel: "Authentic South Indian Kitchen",
+    channelVerified: true,
+    youtubeId: "J0n87Qd317M",
+    youtubeUrl: "https://www.youtube.com/watch?v=J0n87Qd317M",
+    embedUrl: "https://www.youtube-nocookie.com/embed/J0n87Qd317M",
+    mp4Fallback: MP4_COOKING_CLIPS.veggies,
+    duration: "08:45",
+    views: "1.4M views",
+    thumbnail: "https://images.unsplash.com/photo-1540420773420-3366772f4999?auto=format&fit=crop&w=800&q=80",
+    ingredients: ["poriyal", "cabbage", "carrot", "beans", "onion", "tomato", "stir fry"],
+    category: "Vegetable Stir-Fry",
+    macros: { protein: "12g", calories: "210 kcal", carbs: "26g", fat: "5g" },
+    nutritionHighlights: [
+      "Preserves heat-sensitive Micronutrients & Vitamin C",
+      "High Dietary Fiber for smooth digestion & fat loss",
+      "Light mustard & curry leaf tempering for metabolic boost"
+    ],
+    summary: "Traditional South Indian style vegetable poriyal using cabbage, carrots, beans, and mustard tempering."
+  },
+  {
+    id: "vid-kurma-01",
+    title: "Desi Veg Kurma Curry: Creamy Coconut-Cashew Gravy",
+    channel: "Desi Masterclass Recipes",
+    channelVerified: true,
+    youtubeId: "bJ7B-w086D0",
+    youtubeUrl: "https://www.youtube.com/watch?v=bJ7B-w086D0",
+    embedUrl: "https://www.youtube-nocookie.com/embed/bJ7B-w086D0",
+    mp4Fallback: MP4_COOKING_CLIPS.curry,
+    duration: "11:20",
+    views: "2.1M views",
+    thumbnail: "https://images.unsplash.com/photo-1631452180519-c014fe946bc7?auto=format&fit=crop&w=800&q=80",
+    ingredients: ["kurma", "veg kurma", "vegetable curry", "curry", "tomato", "onion"],
+    category: "Indian Curry Base",
+    macros: { protein: "15g", calories: "290 kcal", carbs: "32g", fat: "11g" },
+    nutritionHighlights: [
+      "Rich in Anti-Inflammatory Spices (Turmeric, Ginger, Garlic)",
+      "Balanced plant protein satiety with complex carbohydrates",
+      "Healthy fat absorption from light ghee & cashew paste"
+    ],
+    summary: "Restaurant-style rich vegetable kurma curry infused with aromatic spices and fresh vegetables."
+  },
+  {
+    id: "vid-veg-soup-01",
+    title: "Clear Garden Vegetable Detox Soup for Weight Loss",
+    channel: "Healthy Detox Kitchen",
+    channelVerified: true,
+    youtubeId: "e2Q0u8e_e4Y",
+    youtubeUrl: "https://www.youtube.com/watch?v=e2Q0u8e_e4Y",
+    embedUrl: "https://www.youtube-nocookie.com/embed/e2Q0u8e_e4Y",
+    mp4Fallback: MP4_COOKING_CLIPS.salad,
+    duration: "07:15",
+    views: "950K views",
+    thumbnail: "https://images.unsplash.com/photo-1547592166-23ac45744acd?auto=format&fit=crop&w=800&q=80",
+    ingredients: ["soup", "detox soup", "clear soup", "vegetable soup", "cabbage soup"],
+    category: "Weight Loss & Detox",
+    macros: { protein: "8g", calories: "110 kcal", carbs: "18g", fat: "2g" },
+    nutritionHighlights: [
+      "Ultra-Low Calorie Density for maximum fat shredding",
+      "High hydration and electrolyte replenishment",
+      "Garlic & black pepper immunity booster"
+    ],
+    summary: "Cleansing clear vegetable soup packed with cabbage, carrots, beans, and black pepper."
   },
   {
     id: "vid-avocado-01",
