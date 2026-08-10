@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useApp } from '../context/AppContext';
 import { analyzeImageFile, analyzeMenuCardImage } from '../services/imageRecognition';
 import RecipeDetailModal from '../components/RecipeDetailModal';
-import { getDetailedDishAnalysis } from '../utils/nutritionAiEngine';
+import { getDetailedDishAnalysis, getDishRecommendationsFromAvailableIngredients } from '../utils/nutritionAiEngine';
 import {
   Plus,
   Send,
@@ -307,6 +307,28 @@ export default function IngredientScannerPage() {
     if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
+  const handleSelectRecommendedDish = (dishItem) => {
+    const dishAnalysis = getDetailedDishAnalysis(dishItem.dishName, userProfile);
+    const relevantVideos = getVideosForIngredients(dishItem.dishName);
+
+    const userMsg = {
+      id: Date.now(),
+      sender: 'user',
+      text: `Selected Recipe: "${dishItem.dishName}"`
+    };
+
+    const aiReply = {
+      id: Date.now() + 1,
+      sender: 'ai',
+      text: `👨‍🍳 **Complete Full Recipe Generated**: **"${dishAnalysis.dishName}"**\nHere is the complete step-by-step recipe, full protein breakdown, and fitness-friendly version tailored for your **${userProfile.goal}** target:`,
+      dishAnalysis: dishAnalysis,
+      relevantVideos: relevantVideos.slice(0, 2)
+    };
+
+    setMessages((prev) => [...prev, userMsg, aiReply]);
+    addToast(`Generated full recipe for "${dishAnalysis.dishName}"!`, 'success');
+  };
+
   // Send Prompt handler
   const handleSendPrompt = async (e, overrideText = null) => {
     if (e) e.preventDefault();
@@ -340,13 +362,24 @@ export default function IngredientScannerPage() {
     }
 
     setTimeout(() => {
-      const querySubject = currentText.trim() || (detectedIngs.length > 0 ? detectedIngs.join(' ') : 'samosa');
+      const querySubject = currentText.trim() || (detectedIngs.length > 0 ? detectedIngs.join(', ') : 'tomato, cabbage, onion, carrot, beans');
+      
+      // Check if input is a multi-ingredient available list
+      const isMultiIngredientQuery = querySubject.includes(',') || querySubject.split(' ').length >= 3;
+      
+      let dishRecommendations = [];
+      if (isMultiIngredientQuery) {
+        dishRecommendations = getDishRecommendationsFromAvailableIngredients(querySubject, userProfile);
+      }
+
       const dishAnalysis = getDetailedDishAnalysis(querySubject, userProfile);
       const relevantVideos = getVideosForIngredients(querySubject);
 
       let responseText = `Here is the authentic ingredient breakdown, protein content, and daily intake recommendation for **${dishAnalysis.dishName}** tailored for your assigned nation **${userProfile.nation || 'India'}** (${userProfile.cuisineStyle || 'High-Protein Gym'}) and **${userProfile.goal}** goal (${userProfile.dailyProteinGoal}g Protein target):`;
 
-      if (currentAttached) {
+      if (dishRecommendations.length > 0) {
+        responseText = `Recognized **${querySubject}** as available ingredients! Based ONLY on your provided ingredients, here are recommended realistic dishes ranked by ingredient match:`;
+      } else if (currentAttached) {
         responseText = `Analyzed photo "${currentAttached.name}"! Identified dish **${dishAnalysis.dishName}**. Here is the exact ingredient protein breakdown and recommended daily intake:`;
       }
 
@@ -354,8 +387,8 @@ export default function IngredientScannerPage() {
         id: Date.now() + 1,
         sender: 'ai',
         text: responseText,
-        dishAnalysis: dishAnalysis,
-        recommendedRecipes: [dishAnalysis.recipeCard],
+        dishAnalysis: dishRecommendations.length > 0 ? null : dishAnalysis,
+        ingredientRecommendations: dishRecommendations.length > 0 ? dishRecommendations : null,
         relevantVideos: relevantVideos.slice(0, 2)
       };
 
@@ -530,6 +563,119 @@ export default function IngredientScannerPage() {
                     )}
                   </div>
                 </div>
+
+                {/* Available Ingredients Dish Recommendations Panel */}
+                {msg.ingredientRecommendations && msg.ingredientRecommendations.length > 0 && (
+                  <div className="p-4 sm:p-5 rounded-2xl bg-slate-900/95 border border-emerald-500/40 space-y-4 shadow-xl animate-in fade-in duration-300">
+                    <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+                      <div className="flex items-center gap-2">
+                        <Sparkles className="w-5 h-5 text-emerald-400" />
+                        <div>
+                          <h3 className="text-sm font-extrabold text-white font-heading">
+                            Recommended Dishes from Available Ingredients
+                          </h3>
+                          <p className="text-[11px] text-slate-400">
+                            Ranked by available ingredient match count • Zero hallucinated ingredients
+                          </p>
+                        </div>
+                      </div>
+                      <span className="px-2.5 py-1 rounded-xl bg-emerald-500/20 text-emerald-400 border border-emerald-500/40 text-xs font-extrabold">
+                        {msg.ingredientRecommendations.length} Dishes Found
+                      </span>
+                    </div>
+
+                    <div className="space-y-4">
+                      {msg.ingredientRecommendations.map((dish, idx) => (
+                        <div
+                          key={dish.id || idx}
+                          className="p-4 rounded-2xl bg-slate-950/80 border border-slate-800 hover:border-emerald-500/50 transition-all space-y-3"
+                        >
+                          {/* Dish Header & Rank Match Badge */}
+                          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-800/80 pb-2.5">
+                            <div>
+                              <div className="flex items-center gap-2">
+                                <span className="px-2 py-0.5 rounded-md bg-emerald-500 text-slate-950 text-[10px] font-extrabold uppercase">
+                                  Rank #{idx + 1}
+                                </span>
+                                <h4 className="text-sm font-extrabold text-white font-heading">{dish.dishName}</h4>
+                              </div>
+                              <span className="text-[11px] text-slate-400 mt-0.5 block">{dish.cuisine} • {dish.dietary} • Serving: {dish.servingSize}</span>
+                            </div>
+
+                            <div className="flex items-center gap-2 shrink-0">
+                              <span className="px-2.5 py-1 rounded-xl bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 text-xs font-bold flex items-center gap-1">
+                                🔥 Uses {dish.matchScore.usedCount} of {dish.matchScore.totalAvailable} Ingredients (100% Match)
+                              </span>
+                              <span className="px-2.5 py-1 rounded-xl bg-slate-900 text-slate-300 border border-slate-800 text-xs font-semibold">
+                                {dish.macros.calories} kcal
+                              </span>
+                            </div>
+                          </div>
+
+                          {/* Available Ingredients Used Badges */}
+                          <div className="space-y-1.5">
+                            <span className="text-[11px] font-bold text-emerald-400 flex items-center gap-1">
+                              <CheckCircle2 className="w-3.5 h-3.5" /> Available Ingredients Used:
+                            </span>
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
+                              {dish.availableIngredientsUsed.map((ing, iIdx) => (
+                                <div key={iIdx} className="p-2 rounded-xl bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-between gap-2">
+                                  <div className="flex items-center gap-2 min-w-0">
+                                    <span className="text-sm">{ing.icon}</span>
+                                    <span className="text-xs font-bold text-white truncate">{ing.name}</span>
+                                  </div>
+                                  <span className="text-[10px] text-emerald-400 font-semibold shrink-0">{ing.amount}</span>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+
+                          {/* Optional Additional Pantry Staples */}
+                          {dish.optionalIngredients && (
+                            <div className="space-y-1.5">
+                              <span className="text-[11px] font-bold text-slate-400 flex items-center gap-1">
+                                <Info className="w-3.5 h-3.5 text-slate-400" /> Optional / Additional Pantry Staples:
+                              </span>
+                              <div className="flex flex-wrap gap-1.5">
+                                {dish.optionalIngredients.map((opt, oIdx) => (
+                                  <span key={oIdx} className="px-2.5 py-1 rounded-xl bg-slate-900 border border-slate-800 text-[11px] font-semibold text-slate-300 flex items-center gap-1">
+                                    <span>{opt.icon}</span> {opt.name} ({opt.amount})
+                                  </span>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+
+                          {/* Goal-Aligned FitGen Fitness Version */}
+                          {dish.fitgenGoalVersion && (
+                            <div className="p-3 rounded-xl bg-gradient-to-r from-emerald-950/40 via-slate-900 to-teal-950/40 border border-emerald-500/30 text-xs text-emerald-300 font-medium">
+                              {dish.fitgenGoalVersion}
+                            </div>
+                          )}
+
+                          {/* Action Button: Generate Complete Recipe */}
+                          <div className="pt-1 flex items-center justify-between border-t border-slate-800/80">
+                            <div className="flex items-center gap-3 text-xs text-slate-400 font-semibold">
+                              <span>⏱️ Prep: {dish.prepTime}</span>
+                              <span>•</span>
+                              <span>🔥 Cook: {dish.cookTime}</span>
+                              <span>•</span>
+                              <span className="text-emerald-400 font-bold">💪 {dish.macros.protein}g Protein</span>
+                            </div>
+
+                            <button
+                              onClick={() => handleSelectRecommendedDish(dish)}
+                              className="px-4 py-2 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-400 hover:from-emerald-400 hover:to-teal-300 text-slate-950 font-extrabold text-xs flex items-center gap-1.5 transition-all shadow-md active:scale-95 cursor-pointer"
+                            >
+                              <Utensils className="w-3.5 h-3.5" />
+                              <span>👨‍🍳 Generate Complete Recipe</span>
+                            </button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
 
                 {/* AI Detailed Dish Analysis & Protein Breakdown Card */}
                 {msg.dishAnalysis && (
