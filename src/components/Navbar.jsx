@@ -135,6 +135,49 @@ export default function Navbar() {
               )}
             </NavLink>
 
+            {/* Theme Selector Dropdown (Right Side of Navbar Taskbar) */}
+            <div className="relative">
+              <button
+                onClick={() => setShowThemeDropdown(!showThemeDropdown)}
+                className="p-2 sm:px-3 sm:py-1.5 rounded-xl text-slate-300 hover:text-white bg-slate-900 border border-slate-800 hover:border-slate-700 transition-all flex items-center gap-1.5 cursor-pointer shadow-sm"
+                title="Change Project Color Theme"
+              >
+                <Palette className="w-4 h-4 text-emerald-400" />
+                <span className="hidden sm:inline text-xs font-bold capitalize">{currentTheme}</span>
+              </button>
+
+              {showThemeDropdown && (
+                <div className="absolute right-0 mt-2 w-48 bg-slate-900 border border-slate-800 rounded-2xl shadow-2xl p-2 z-50 space-y-1 animate-in fade-in duration-200">
+                  <div className="px-2.5 py-1 text-[10px] font-bold text-slate-400 uppercase tracking-wider border-b border-slate-800 pb-1 mb-1">
+                    Select Project Theme
+                  </div>
+                  {[
+                    { name: 'emerald', label: '❇️ Cyber Emerald', color: '#10B981' },
+                    { name: 'cyberpunk', label: '🟣 Neon Cyberpunk', color: '#EC4899' },
+                    { name: 'sunset', label: '🌅 Golden Sunset', color: '#F59E0B' },
+                    { name: 'ocean', label: '🌊 Sapphire Ocean', color: '#06B6D4' },
+                    { name: 'stealth', label: '🖤 Stealth Onyx', color: '#94A3B8' }
+                  ].map((thm) => (
+                    <button
+                      key={thm.name}
+                      onClick={() => {
+                        changeTheme(thm.name);
+                        setShowThemeDropdown(false);
+                      }}
+                      className={`w-full px-3 py-2 rounded-xl text-xs font-bold transition-all flex items-center justify-between cursor-pointer ${
+                        currentTheme === thm.name
+                          ? 'bg-slate-800 text-white border border-slate-700 shadow-sm'
+                          : 'text-slate-400 hover:text-white hover:bg-slate-950'
+                      }`}
+                    >
+                      <span>{thm.label}</span>
+                      <span className="w-3 h-3 rounded-full border border-white/20" style={{ backgroundColor: thm.color }} />
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+
             {/* User Profile Pill */}
             <NavLink
               to="/profile"
