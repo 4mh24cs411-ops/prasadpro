@@ -338,34 +338,81 @@ export default function MealPlannerPage() {
         </div>
       </div>
 
-      {/* Meals Grid (Breakfast, Lunch, Dinner, Snacks) */}
+      {/* Unique AI Time Slot Assigner & Scheduled Meals Grid */}
       <div className="space-y-6">
-        <div className="flex items-center justify-between">
-          <h3 className="text-lg font-bold font-heading text-white">Daily Meal Schedule</h3>
-          <span className="text-xs text-slate-400">4 Balanced Meals</span>
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div>
+            <h3 className="text-lg font-bold font-heading text-white flex items-center gap-2">
+              📅 Unique AI Daily Meal Schedule & Time Assigner
+            </h3>
+            <p className="text-xs text-slate-400">
+              Assign precise eating times, pre/post workout slots, and automatic alarm reminders for peak metabolic absorption.
+            </p>
+          </div>
+          <span className="px-3 py-1.5 rounded-xl bg-cyan-500/10 border border-cyan-500/30 text-cyan-400 text-xs font-extrabold flex items-center gap-1.5">
+            ⚡ {mealPlan.length} Scheduled Meals Active
+          </span>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {mealPlan.map((meal) => (
             <div
               key={meal.id}
-              className="glass-panel p-6 space-y-4 hover:border-emerald-500/30 transition-all flex flex-col justify-between"
+              className="glass-panel p-6 space-y-4 hover:border-cyan-500/40 transition-all flex flex-col justify-between group"
             >
               <div className="space-y-3">
-                <div className="flex items-center justify-between">
-                  <span className="text-xs font-extrabold px-3 py-1 rounded-lg uppercase tracking-wider bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">
-                    {meal.type}
-                  </span>
-                  <span className="text-xs text-slate-400 font-medium flex items-center gap-1">
-                    <Clock className="w-3.5 h-3.5 text-slate-500" /> {meal.prepTime || '15 mins'}
-                  </span>
+                {/* Header: Slot Badge & Time Assigner */}
+                <div className="flex items-center justify-between gap-2 border-b border-slate-800 pb-3">
+                  <div className="flex items-center gap-2">
+                    <select
+                      value={meal.type || 'lunch'}
+                      onChange={(e) => {
+                        const newType = e.target.value;
+                        setMealPlan((prev) =>
+                          prev.map((m) => (m.id === meal.id ? { ...m, type: newType } : m))
+                        );
+                        addToast(`Re-assigned slot to ${newType.toUpperCase()}`, 'info');
+                      }}
+                      className="text-xs font-extrabold px-3 py-1 rounded-lg uppercase tracking-wider bg-cyan-500/15 text-cyan-400 border border-cyan-500/30 focus:outline-none cursor-pointer"
+                    >
+                      <option value="breakfast">🌅 Breakfast</option>
+                      <option value="lunch">☀️ Lunch</option>
+                      <option value="snack">🍎 Snack</option>
+                      <option value="dinner">🌙 Dinner</option>
+                      <option value="pre-workout">⚡ Pre-Workout Fuel</option>
+                      <option value="post-workout">💪 Post-Workout Recovery</option>
+                    </select>
+                  </div>
+
+                  {/* Scheduled Time Assigner Input */}
+                  <div className="flex items-center gap-1.5 bg-slate-900 border border-slate-800 rounded-xl px-2.5 py-1">
+                    <Clock className="w-3.5 h-3.5 text-cyan-400" />
+                    <input
+                      type="text"
+                      value={meal.scheduledTime || '01:00 PM'}
+                      onChange={(e) => {
+                        const newTime = e.target.value;
+                        setMealPlan((prev) =>
+                          prev.map((m) => (m.id === meal.id ? { ...m, scheduledTime: newTime } : m))
+                        );
+                      }}
+                      placeholder="01:00 PM"
+                      className="w-20 bg-transparent text-xs font-bold text-slate-200 focus:outline-none text-right"
+                    />
+                  </div>
                 </div>
 
-                <h4 className="text-base font-bold text-slate-100 font-heading">{meal.title}</h4>
-                <p className="text-xs text-slate-400 leading-relaxed">{meal.description}</p>
+                {/* Meal Title & Description */}
+                <div>
+                  <h4 className="text-base font-bold text-slate-100 font-heading group-hover:text-cyan-400 transition-colors">
+                    {meal.title}
+                  </h4>
+                  <p className="text-xs text-slate-400 leading-relaxed mt-1">{meal.description}</p>
+                </div>
 
+                {/* Key Ingredients */}
                 {meal.ingredients && (
-                  <div className="space-y-1.5 pt-2">
+                  <div className="space-y-1.5 pt-1">
                     <span className="text-[11px] font-semibold text-slate-300">Key Ingredients:</span>
                     <div className="flex flex-wrap gap-1.5">
                       {meal.ingredients.map((ing, idx) => (
@@ -381,15 +428,49 @@ export default function MealPlannerPage() {
                 )}
               </div>
 
-              <div className="flex items-center justify-between pt-4 border-t border-slate-800">
-                <div className="flex items-center gap-3 text-xs font-semibold text-slate-300">
-                  <span className="text-amber-400 font-bold">{meal.calories} kcal</span>
-                  <span>•</span>
-                  <span className="text-emerald-400">{meal.protein}g P</span>
-                  <span>•</span>
-                  <span className="text-blue-400">{meal.carbs}g C</span>
-                  <span>•</span>
-                  <span className="text-purple-400">{meal.fat}g F</span>
+              {/* Footer Actions & Macros */}
+              <div className="space-y-3 pt-3 border-t border-slate-800">
+                <div className="flex items-center justify-between text-xs font-semibold text-slate-300">
+                  <div className="flex items-center gap-2">
+                    <span className="text-amber-400 font-bold">{meal.calories} kcal</span>
+                    <span>•</span>
+                    <span className="text-cyan-400">{meal.protein}g Protein</span>
+                  </div>
+                  <span className="text-slate-400 text-[11px]">⏱️ {meal.prepTime || '15 mins'}</span>
+                </div>
+
+                <div className="flex items-center justify-between gap-2">
+                  <button
+                    onClick={() => {
+                      const newReminder = !meal.reminderEnabled;
+                      setMealPlan((prev) =>
+                        prev.map((m) => (m.id === meal.id ? { ...m, reminderEnabled: newReminder } : m))
+                      );
+                      addToast(
+                        newReminder
+                          ? `🔔 Alarm Reminder enabled for ${meal.scheduledTime || '01:00 PM'}!`
+                          : `🔕 Reminder disabled.`,
+                        newReminder ? 'success' : 'info'
+                      );
+                    }}
+                    className={`px-3 py-1.5 rounded-xl border text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer ${
+                      meal.reminderEnabled
+                        ? 'bg-cyan-500/15 border-cyan-500/40 text-cyan-300'
+                        : 'bg-slate-900 border-slate-800 text-slate-400 hover:text-slate-200'
+                    }`}
+                  >
+                    <span>{meal.reminderEnabled ? '🔔 Reminder ON' : '🔕 Set Alarm'}</span>
+                  </button>
+
+                  <button
+                    onClick={() => {
+                      logMealToTracker(meal);
+                      addToast(`Logged ${meal.title} to Nutrition Tracker!`, 'success');
+                    }}
+                    className="px-3.5 py-1.5 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-500 hover:from-cyan-400 hover:to-blue-400 text-slate-950 font-extrabold text-xs flex items-center gap-1 shadow-md transition-transform active:scale-95 cursor-pointer"
+                  >
+                    <CheckCircle className="w-3.5 h-3.5" /> Log Meal
+                  </button>
                 </div>
               </div>
             </div>

@@ -49,6 +49,7 @@ export default function IngredientScannerPage() {
     addIngredient, 
     addGroceryItem, 
     addToast,
+    scheduleMeal,
     scannerMessages,
     setScannerMessages 
   } = useApp();
@@ -827,13 +828,24 @@ export default function IngredientScannerPage() {
                               <span className="text-emerald-400 font-bold">💪 {dish.macros.protein}g Protein</span>
                             </div>
 
-                            <button
-                              onClick={() => handleSelectRecommendedDish(dish)}
-                              className="px-4 py-2 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-400 hover:from-emerald-400 hover:to-teal-300 text-slate-950 font-extrabold text-xs flex items-center gap-1.5 transition-all shadow-md active:scale-95 cursor-pointer"
-                            >
-                              <Utensils className="w-3.5 h-3.5" />
-                              <span>👨‍🍳 View Complete Step-by-Step Recipe</span>
-                            </button>
+                            <div className="flex items-center gap-2">
+                              <button
+                                onClick={() => scheduleMeal(dish, 'lunch', '01:15 PM')}
+                                className="px-3 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-slate-200 border border-slate-700 font-bold text-xs flex items-center gap-1.5 transition-all cursor-pointer shadow-sm active:scale-95"
+                                title="Schedule Meal to AI Planner"
+                              >
+                                <Calendar className="w-3.5 h-3.5 text-cyan-400" />
+                                <span>📅 Schedule</span>
+                              </button>
+
+                              <button
+                                onClick={() => handleSelectRecommendedDish(dish)}
+                                className="px-4 py-2 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-500 hover:from-cyan-400 hover:to-blue-400 text-slate-950 font-extrabold text-xs flex items-center gap-1.5 transition-all shadow-md active:scale-95 cursor-pointer"
+                              >
+                                <Utensils className="w-3.5 h-3.5" />
+                                <span>👨‍🍳 View Complete Step-by-Step Recipe</span>
+                              </button>
+                            </div>
                           </div>
                         </div>
                       ))}

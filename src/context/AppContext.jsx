@@ -536,6 +536,28 @@ export function AppProvider({ children }) {
     return { score, status, color };
   };
 
+  // Unique AI Meal Scheduling & Time Slot Assigner Function
+  const scheduleMeal = (dishOrMeal, slot = 'lunch', scheduledTime = '01:00 PM', reminderEnabled = true) => {
+    const newMeal = {
+      id: 'sched-' + Date.now() + '-' + Math.random().toString(36).substring(2, 6),
+      type: slot.toLowerCase(),
+      title: dishOrMeal.name || dishOrMeal.title || 'Scheduled Fitness Meal',
+      calories: dishOrMeal.calories || 450,
+      protein: dishOrMeal.protein || 30,
+      carbs: dishOrMeal.carbs || 45,
+      fat: dishOrMeal.fat || 15,
+      prepTime: dishOrMeal.prepTime || '20 mins',
+      scheduledTime: scheduledTime,
+      reminderEnabled: reminderEnabled,
+      description: dishOrMeal.description || dishOrMeal.shortReason || 'AI Scheduled Fitness Meal',
+      ingredients: dishOrMeal.ingredientsUsed || dishOrMeal.ingredients || ['Fresh Ingredients'],
+      fitgenNote: dishOrMeal.fitgenVersion || dishOrMeal.fitnessReason || 'Macro Balanced'
+    };
+
+    setMealPlan((prev) => [newMeal, ...prev.filter((m) => m.id !== newMeal.id)]);
+    addToast(`📅 Scheduled "${newMeal.title}" for ${slot.toUpperCase()} at ${scheduledTime}!`, 'success');
+  };
+
   return (
     <AppContext.Provider
       value={{
@@ -554,6 +576,7 @@ export function AppProvider({ children }) {
         toggleSaveRecipe,
         mealPlan,
         setMealPlan,
+        scheduleMeal,
         groceryList,
         addGroceryItem,
         toggleGroceryItem,
