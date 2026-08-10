@@ -676,168 +676,218 @@ export function getDishRecommendationsFromAvailableIngredients(rawIngredientsTex
     fitgenGoalAdvice1 = '✨ FitGen Maintenance Version: Perfectly balanced nutrient-dense portion for steady energy.';
   }
 
+  const hasCurd = userMatchedItems.some(i => i.key.includes('curd') || i.key.includes('yogurt'));
+  const hasTomato = userMatchedItems.some(i => i.key.includes('tomato'));
+  const hasNuts = userMatchedItems.some(i => i.key.includes('nut'));
+  const hasChicken = userMatchedItems.some(i => i.key.includes('chicken'));
+  const hasPaneer = userMatchedItems.some(i => i.key.includes('paneer'));
+
   const recommendations = [];
 
-  // Candidate 1: Mix Vegetable Poriyal / Sauté
-  const poriyalVideos = getVideosForIngredients('poriyal');
-  recommendations.push({
-    id: `rec-dish-1-${Date.now()}`,
-    dishName: `South Indian Mix Vegetable Sauté (Poriyal)`,
-    cuisine: 'South Indian',
-    dietary: 'Vegetarian / Vegan',
-    image: 'https://images.unsplash.com/photo-1540420773420-3366772f4999?auto=format&fit=crop&w=800&q=80',
-    video: poriyalVideos[0] || null,
-    matchScore: {
-      usedCount: dish1Used.length,
-      totalAvailable: availableTokens.length,
-      percentage: 100
-    },
-    availableIngredientsUsed: dish1Used,
-    optionalIngredients: [
-      { name: 'Mustard Seeds & Curry Leaves', icon: '🌿', amount: '1 tsp', note: 'Tempering' },
-      { name: 'Minced Garlic & Ginger', icon: '🧄', amount: '1 tsp', note: 'Aromatics' },
-      { name: 'Cold-Pressed Cooking Oil / Ghee', icon: '🫒', amount: '1 tsp', note: 'Sautéing' },
-      { name: 'Turmeric, Salt & Black Pepper', icon: '🧂', amount: '1 tsp', note: 'Seasoning' }
-    ],
-    prepTime: '10 mins',
-    cookTime: '12 mins',
-    servingSize: '1.5 cups (320g)',
-    macros: {
-      calories: dish1Calories,
-      protein: dish1Protein,
-      carbs: Math.round(dish1Calories * 0.55 / 4),
-      fat: Math.round(dish1Calories * 0.20 / 9),
-      fiber: 9.5
-    },
-    fitnessGoalReason: goal === 'Weight Loss'
-      ? 'High-volume low-calorie sauté that suppresses hunger hormones while providing vital micronutrients for fat loss.'
-      : 'Nutrient-dense vegetable volume that aids digestion and fuels steady lean muscle growth.',
-    fitgenGoalVersion: fitgenGoalAdvice1,
-    instructions: [
-      { step: 1, title: 'Wash & Chop Veggies', description: `Finely chop ${dish1Used.map(i => i.name).join(', ')}.`, timerSeconds: 300 },
-      { step: 2, title: 'Prepare Tempering', description: 'Heat 1 tsp oil. Add mustard seeds, curry leaves, ginger, chilis, and garlic.', timerSeconds: 120 },
-      { step: 3, title: 'Sauté & Cover Cook', description: 'Add chopped vegetables, turmeric, and salt. Toss on medium heat, splash 2 tbsp water, cover and steam cook for 8 mins.', timerSeconds: 480 },
-      { step: 4, title: 'Garnish & Serve', description: 'Uncover, toss on high heat for 1 min, and serve hot!', timerSeconds: 60 }
-    ]
-  });
+  if (hasCurd || (hasTomato && hasNuts)) {
+    const curdVideos = getVideosForIngredients('curd');
+    recommendations.push({
+      id: `rec-dish-1-${Date.now()}`,
+      dishName: `Fresh Tomato & Spiced Curd Salad with Roasted Nut Crunch`,
+      cuisine: 'Indian Health',
+      dietary: 'Vegetarian',
+      image: 'https://images.unsplash.com/photo-1540420773420-3366772f4999?auto=format&fit=crop&w=800&q=80',
+      video: curdVideos[0] || null,
+      matchScore: { usedCount: userMatchedItems.length, totalAvailable: uniqueTokens.length, percentage: 100 },
+      availableIngredientsUsed: userMatchedItems,
+      optionalIngredients: [
+        { name: 'Fresh Mint & Cilantro', icon: '🌿', amount: '2 tbsp', note: 'Herb garnish' },
+        { name: 'Roasted Cumin Powder', icon: '🧂', amount: '1/2 tsp', note: 'Digestive spice' }
+      ],
+      prepTime: '5 mins',
+      cookTime: '3 mins',
+      servingSize: '1 bowl (280g)',
+      macros: { calories: dish1Calories + 40, protein: dish1Protein + 4.0, carbs: 18, fat: 12, fiber: 5.5 },
+      fitnessGoalReason: 'Probiotic-rich yogurt paired with healthy nut fats and antioxidant tomatoes for gut health and muscle recovery.',
+      fitgenGoalVersion: goal === 'Weight Loss'
+        ? '🔥 FitGen Weight Loss Version: Use low-fat hung curd and air-roasted nuts for high satiety under 220 calories.'
+        : '💪 FitGen Muscle Gain Version: Add 1 scoop unflavored whey or 100g paneer cubes for +20g protein.',
+      instructions: [
+        { step: 1, title: 'Whisk Curd & Seasoning', description: 'Whisk fresh curd with Himalayan salt and black pepper until smooth.', timerSeconds: 120 },
+        { step: 2, title: 'Dice Tomatoes & Toss Nuts', description: 'Dice tomatoes into bite-sized cubes. Lightly toast nuts in oil for 2 mins.', timerSeconds: 180 },
+        { step: 3, title: 'Combine & Serve', description: 'Fold diced tomatoes into whisked curd, top with roasted nuts, and serve chilled!', timerSeconds: 60 }
+      ]
+    });
 
-  // Candidate 2: Desi Mixed Veg Curry / Kurma
-  const kurmaVideos = getVideosForIngredients('kurma');
-  recommendations.push({
-    id: `rec-dish-2-${Date.now()}`,
-    dishName: `Authentic Desi Mixed Vegetable Curry`,
-    cuisine: 'North Indian',
-    dietary: 'Vegetarian',
-    image: 'https://images.unsplash.com/photo-1631452180519-c014fe946bc7?auto=format&fit=crop&w=800&q=80',
-    video: kurmaVideos[0] || null,
-    matchScore: {
-      usedCount: dish1Used.length,
-      totalAvailable: availableTokens.length,
-      percentage: 100
-    },
-    availableIngredientsUsed: dish1Used,
-    optionalIngredients: [
-      { name: 'Tomato & Cashew Gravy Base', icon: '🍅', amount: '1/2 cup', note: 'Curry base' },
-      { name: 'Ginger-Garlic Paste', icon: '🧄', amount: '1 tbsp', note: 'Flavoring' },
-      { name: 'Light Ghee / Oil', icon: '🫒', amount: '1 tsp', note: 'Cooking' },
-      { name: 'Garam Masala, Coriander & Red Chili', icon: '🌶️', amount: '1.5 tsp', note: 'Spices' }
-    ],
-    prepTime: '12 mins',
-    cookTime: '15 mins',
-    servingSize: '2 cups (380g)',
-    macros: {
-      calories: dish1Calories + 70,
-      protein: dish1Protein + 3.0,
-      carbs: Math.round((dish1Calories + 70) * 0.50 / 4),
-      fat: Math.round((dish1Calories + 70) * 0.25 / 9),
-      fiber: 10.0
-    },
-    fitnessGoalReason: 'Combines anti-inflammatory turmeric and ginger with high-fiber veggies to boost immunity and sustain muscle recovery.',
-    fitgenGoalVersion: fitgenGoalAdvice1,
-    instructions: [
-      { step: 1, title: 'Blend Gravy Base', description: 'Sauté onions, garlic, and tomatoes. Blend into a smooth gravy paste.', timerSeconds: 360 },
-      { step: 2, title: 'Boil Available Veggies', description: `Par-boil ${dish1Used.map(i => i.name).join(', ')} with a pinch of salt until tender.`, timerSeconds: 420 },
-      { step: 3, title: 'Simmer Curry', description: 'Combine par-boiled veggies into gravy, add garam masala, simmer 5 mins.', timerSeconds: 300 }
-    ]
-  });
+    recommendations.push({
+      id: `rec-dish-2-${Date.now()}`,
+      dishName: `South Indian Tomato Curd Rice / Relish with Nut Tempering`,
+      cuisine: 'South Indian',
+      dietary: 'Vegetarian',
+      image: 'https://images.unsplash.com/photo-1603133872878-684f208fb84b?auto=format&fit=crop&w=800&q=80',
+      video: getVideosForIngredients('curd rice')[0] || curdVideos[0],
+      matchScore: { usedCount: userMatchedItems.length, totalAvailable: uniqueTokens.length, percentage: 100 },
+      availableIngredientsUsed: userMatchedItems,
+      optionalIngredients: [
+        { name: 'Cooked Basmati Rice', icon: '🍚', amount: '1 cup', note: 'Carb base' },
+        { name: 'Mustard Seeds & Curry Leaves', icon: '🌿', amount: '1 tsp', note: 'Tempering' }
+      ],
+      prepTime: '8 mins',
+      cookTime: '7 mins',
+      servingSize: '1.5 cups (320g)',
+      macros: { calories: dish1Calories + 110, protein: dish1Protein + 3.0, carbs: 38, fat: 8, fiber: 4.5 },
+      fitnessGoalReason: 'Restores electrolytes and provides cooling probiotics to lower core body temperature post-workout.',
+      fitgenGoalVersion: '⚡ FitGen Recomp Version: Swap white rice for brown rice or quinoa to increase fiber.',
+      instructions: [
+        { step: 1, title: 'Mix Rice & Curd', description: 'Mash cooked rice with fresh curd and salt until creamy.', timerSeconds: 180 },
+        { step: 2, title: 'Sauté Tomatoes & Nuts', description: 'Heat 1 tsp oil. Sauté mustard seeds, tomatoes, nuts, and pepper.', timerSeconds: 240 },
+        { step: 3, title: 'Toss & Enjoy', description: 'Pour sautéed tomato nut mixture over curd rice, mix well, and enjoy!', timerSeconds: 60 }
+      ]
+    });
 
-  // Candidate 3: Clear Garden Vegetable Detox Soup
-  const soupVideos = getVideosForIngredients('soup');
-  recommendations.push({
-    id: `rec-dish-3-${Date.now()}`,
-    dishName: `Clear Garden Vegetable Detox Soup`,
-    cuisine: 'Global Health',
-    dietary: 'Vegan',
-    image: 'https://images.unsplash.com/photo-1547592166-23ac45744acd?auto=format&fit=crop&w=800&q=80',
-    video: soupVideos[0] || null,
-    matchScore: {
-      usedCount: dish1Used.length,
-      totalAvailable: availableTokens.length,
-      percentage: 100
-    },
-    availableIngredientsUsed: dish1Used,
-    optionalIngredients: [
-      { name: 'Vegetable / Herb Broth', icon: '🥣', amount: '3 cups', note: 'Soup base' },
-      { name: 'Minced Garlic & Black Pepper', icon: '🧄', amount: '1 tsp', note: 'Immunity booster' },
-      { name: 'Fresh Lemon Juice & Cilantro', icon: '🍋', amount: '1 tbsp', note: 'Finish' }
-    ],
-    prepTime: '8 mins',
-    cookTime: '10 mins',
-    servingSize: '2 bowls (400g)',
-    macros: {
-      calories: Math.max(90, dish1Calories - 80),
-      protein: Math.round(dish1Protein * 0.8 * 10) / 10,
-      carbs: 18,
-      fat: 2,
-      fiber: 7.5
-    },
-    fitnessGoalReason: 'Ultra-low calorie density broth that flushes excess sodium, supports gut health, and accelerates fat burning.',
-    fitgenGoalVersion: '🔥 FitGen Weight Loss & Fat Shred Version: Ultra-low calorie high-hydration soup for instant satiety.',
-    instructions: [
-      { step: 1, title: 'Dice Veggies', description: `Dice ${dish1Used.map(i => i.name).join(', ')} into small cubes.`, timerSeconds: 240 },
-      { step: 2, title: 'Simmer Broth', description: 'Bring vegetable broth to boil. Add garlic, veggies, salt, and black pepper.', timerSeconds: 480 },
-      { step: 3, title: 'Garnish', description: 'Squeeze fresh lemon juice, garnish with cilantro, and serve piping hot!', timerSeconds: 60 }
-    ]
-  });
+    recommendations.push({
+      id: `rec-dish-3-${Date.now()}`,
+      dishName: `Creamy Spiced Tomato & Yogurt Raita Dip`,
+      cuisine: 'North Indian',
+      dietary: 'Vegetarian',
+      image: 'https://images.unsplash.com/photo-1631452180519-c014fe946bc7?auto=format&fit=crop&w=800&q=80',
+      video: curdVideos[0] || null,
+      matchScore: { usedCount: userMatchedItems.length, totalAvailable: uniqueTokens.length, percentage: 90 },
+      availableIngredientsUsed: userMatchedItems,
+      optionalIngredients: [
+        { name: 'Cucumber Slices', icon: '🥒', amount: '1/2 cup', note: 'Crunch' },
+        { name: 'Roasted Cumin Powder', icon: '🧂', amount: '1 tsp', note: 'Digestive' }
+      ],
+      prepTime: '5 mins',
+      cookTime: '0 mins',
+      servingSize: '1 cup (220g)',
+      macros: { calories: dish1Calories + 20, protein: dish1Protein + 2.5, carbs: 14, fat: 9, fiber: 3.8 },
+      fitnessGoalReason: 'Low-glycemic high-protein dip ideal for healthy gym snacking without excess calories.',
+      fitgenGoalVersion: '🔥 FitGen Weight Loss Version: Zero-oil high protein side dish.',
+      instructions: [
+        { step: 1, title: 'Grate Tomatoes', description: 'Grate fresh tomatoes and chop nuts finely.', timerSeconds: 120 },
+        { step: 2, title: 'Mix with Curd', description: 'Combine with curd, salt, and black pepper.', timerSeconds: 120 },
+        { step: 3, title: 'Serve Dip', description: 'Top with crushed nuts and serve with veggie sticks!', timerSeconds: 60 }
+      ]
+    });
+  } else {
+    // Candidate 1: Mix Vegetable Poriyal / Sauté
+    const poriyalVideos = getVideosForIngredients('poriyal');
+    recommendations.push({
+      id: `rec-dish-1-${Date.now()}`,
+      dishName: `South Indian Mix Vegetable Sauté (Poriyal)`,
+      cuisine: 'South Indian',
+      dietary: 'Vegetarian / Vegan',
+      image: 'https://images.unsplash.com/photo-1540420773420-3366772f4999?auto=format&fit=crop&w=800&q=80',
+      video: poriyalVideos[0] || null,
+      matchScore: {
+        usedCount: dish1Used.length,
+        totalAvailable: uniqueTokens.length,
+        percentage: 100
+      },
+      availableIngredientsUsed: dish1Used,
+      optionalIngredients: [
+        { name: 'Mustard Seeds & Curry Leaves', icon: '🌿', amount: '1 tsp', note: 'Tempering' },
+        { name: 'Minced Garlic & Ginger', icon: '🧄', amount: '1 tsp', note: 'Aromatics' },
+        { name: 'Cold-Pressed Cooking Oil / Ghee', icon: '🫒', amount: '1 tsp', note: 'Sautéing' },
+        { name: 'Turmeric, Salt & Black Pepper', icon: '🧂', amount: '1 tsp', note: 'Seasoning' }
+      ],
+      prepTime: '10 mins',
+      cookTime: '12 mins',
+      servingSize: '1.5 cups (320g)',
+      macros: {
+        calories: dish1Calories,
+        protein: dish1Protein,
+        carbs: Math.round(dish1Calories * 0.55 / 4),
+        fat: Math.round(dish1Calories * 0.20 / 9),
+        fiber: 9.5
+      },
+      fitnessGoalReason: goal === 'Weight Loss'
+        ? 'High-volume low-calorie sauté that suppresses hunger hormones while providing vital micronutrients for fat loss.'
+        : 'Nutrient-dense vegetable volume that aids digestion and fuels steady lean muscle growth.',
+      fitgenGoalVersion: fitgenGoalAdvice1,
+      instructions: [
+        { step: 1, title: 'Wash & Prepare Ingredients', description: `Clean and measure ${dish1Used.map(i => i.name).join(', ')}.`, timerSeconds: 300 },
+        { step: 2, title: 'Prepare Tempering', description: 'Heat 1 tsp oil. Add mustard seeds, curry leaves, ginger, chilis, and garlic.', timerSeconds: 120 },
+        { step: 3, title: 'Sauté & Cover Cook', description: 'Add vegetables, turmeric, and salt. Toss on medium heat, splash 2 tbsp water, cover and steam cook for 8 mins.', timerSeconds: 480 },
+        { step: 4, title: 'Garnish & Serve', description: 'Uncover, toss on high heat for 1 min, and serve hot!', timerSeconds: 60 }
+      ]
+    });
 
-  // Candidate 4: Tossed Vegetable Basmati Fried Rice
-  const riceVideos = getVideosForIngredients('rice');
-  recommendations.push({
-    id: `rec-dish-4-${Date.now()}`,
-    dishName: `High-Protein Tossed Vegetable Basmati Rice`,
-    cuisine: 'Indo-Asian',
-    dietary: 'Vegetarian',
-    image: 'https://images.unsplash.com/photo-1603133872878-684f208fb84b?auto=format&fit=crop&w=800&q=80',
-    video: riceVideos[0] || null,
-    matchScore: {
-      usedCount: Math.max(1, dish1Used.length - 1),
-      totalAvailable: availableTokens.length,
-      percentage: 80
-    },
-    availableIngredientsUsed: dish1Used.slice(0, 4),
-    optionalIngredients: [
-      { name: 'Cooked Basmati / Brown Rice', icon: '🍚', amount: '1.5 cups', note: 'Carb base' },
-      { name: 'Soy Sauce & Black Pepper', icon: '🥢', amount: '1 tbsp', note: 'Sauce' },
-      { name: 'Cold-Pressed Sesame Oil', icon: '🫒', amount: '1 tsp', note: 'Wok stir fry' }
-    ],
-    prepTime: '10 mins',
-    cookTime: '8 mins',
-    servingSize: '1.5 bowls (350g)',
-    macros: {
-      calories: dish1Calories + 120,
-      protein: dish1Protein + 4.5,
-      carbs: Math.round((dish1Calories + 120) * 0.65 / 4),
-      fat: 6,
-      fiber: 6.0
-    },
-    fitnessGoalReason: 'Ideal post-workout glycogen replenishment meal that restores energy reserves while supplying high vegetable fiber.',
-    fitgenGoalVersion: '💪 FitGen Glycogen Refuel Version: Pair with 2 scrambled egg whites or tofu for post-training muscle building.',
-    instructions: [
-      { step: 1, title: 'Wok Sauté Veggies', description: `High-heat sauté ${dish1Used.slice(0, 4).map(i => i.name).join(', ')} in sesame oil for 3 mins.`, timerSeconds: 180 },
-      { step: 2, title: 'Toss Rice & Seasoning', description: 'Add cooked Basmati rice, soy sauce, and black pepper. Stir-fry rapidly for 4 mins.', timerSeconds: 240 },
-      { step: 3, title: 'Serve Hot', description: 'Garnish with spring onions and enjoy hot!', timerSeconds: 60 }
-    ]
-  });
+    // Candidate 2: Desi Mixed Veg Curry / Kurma
+    const kurmaVideos = getVideosForIngredients('kurma');
+    recommendations.push({
+      id: `rec-dish-2-${Date.now()}`,
+      dishName: `Authentic Desi Mixed Vegetable Curry`,
+      cuisine: 'North Indian',
+      dietary: 'Vegetarian',
+      image: 'https://images.unsplash.com/photo-1631452180519-c014fe946bc7?auto=format&fit=crop&w=800&q=80',
+      video: kurmaVideos[0] || null,
+      matchScore: {
+        usedCount: dish1Used.length,
+        totalAvailable: uniqueTokens.length,
+        percentage: 100
+      },
+      availableIngredientsUsed: dish1Used,
+      optionalIngredients: [
+        { name: 'Tomato & Cashew Gravy Base', icon: '🍅', amount: '1/2 cup', note: 'Curry base' },
+        { name: 'Ginger-Garlic Paste', icon: '🧄', amount: '1 tbsp', note: 'Flavoring' },
+        { name: 'Light Ghee / Oil', icon: '🫒', amount: '1 tsp', note: 'Cooking' },
+        { name: 'Garam Masala, Coriander & Red Chili', icon: '🌶️', amount: '1.5 tsp', note: 'Spices' }
+      ],
+      prepTime: '12 mins',
+      cookTime: '15 mins',
+      servingSize: '2 cups (380g)',
+      macros: {
+        calories: dish1Calories + 70,
+        protein: dish1Protein + 3.0,
+        carbs: Math.round((dish1Calories + 70) * 0.50 / 4),
+        fat: Math.round((dish1Calories + 70) * 0.25 / 9),
+        fiber: 10.0
+      },
+      fitnessGoalReason: 'Combines anti-inflammatory turmeric and ginger with high-fiber veggies to boost immunity and sustain muscle recovery.',
+      fitgenGoalVersion: fitgenGoalAdvice1,
+      instructions: [
+        { step: 1, title: 'Blend Gravy Base', description: 'Sauté onions, garlic, and tomatoes. Blend into a smooth gravy paste.', timerSeconds: 360 },
+        { step: 2, title: 'Boil Available Veggies', description: `Par-boil ${dish1Used.map(i => i.name).join(', ')} with a pinch of salt until tender.`, timerSeconds: 420 },
+        { step: 3, title: 'Simmer Curry', description: 'Combine par-boiled veggies into gravy, add garam masala, simmer 5 mins.', timerSeconds: 300 }
+      ]
+    });
+
+    // Candidate 3: Clear Garden Vegetable Detox Soup
+    const soupVideos = getVideosForIngredients('soup');
+    recommendations.push({
+      id: `rec-dish-3-${Date.now()}`,
+      dishName: `Clear Garden Vegetable Detox Soup`,
+      cuisine: 'Global Health',
+      dietary: 'Vegan',
+      image: 'https://images.unsplash.com/photo-1547592166-23ac45744acd?auto=format&fit=crop&w=800&q=80',
+      video: soupVideos[0] || null,
+      matchScore: {
+        usedCount: dish1Used.length,
+        totalAvailable: uniqueTokens.length,
+        percentage: 100
+      },
+      availableIngredientsUsed: dish1Used,
+      optionalIngredients: [
+        { name: 'Vegetable / Herb Broth', icon: '🥣', amount: '3 cups', note: 'Soup base' },
+        { name: 'Minced Garlic & Black Pepper', icon: '🧄', amount: '1 tsp', note: 'Immunity booster' },
+        { name: 'Fresh Lemon Juice & Cilantro', icon: '🍋', amount: '1 tbsp', note: 'Finish' }
+      ],
+      prepTime: '8 mins',
+      cookTime: '10 mins',
+      servingSize: '2 bowls (400g)',
+      macros: {
+        calories: Math.max(90, dish1Calories - 80),
+        protein: Math.round(dish1Protein * 0.8 * 10) / 10,
+        carbs: 18,
+        fat: 2,
+        fiber: 7.5
+      },
+      fitnessGoalReason: 'Ultra-low calorie density broth that flushes excess sodium, supports gut health, and accelerates fat burning.',
+      fitgenGoalVersion: '🔥 FitGen Weight Loss & Fat Shred Version: Ultra-low calorie high-hydration soup for instant satiety.',
+      instructions: [
+        { step: 1, title: 'Dice Veggies', description: `Dice ${dish1Used.map(i => i.name).join(', ')} into small cubes.`, timerSeconds: 240 },
+        { step: 2, title: 'Simmer Broth', description: 'Bring vegetable broth to boil. Add garlic, veggies, salt, and black pepper.', timerSeconds: 480 },
+        { step: 3, title: 'Garnish', description: 'Squeeze fresh lemon juice, garnish with cilantro, and serve piping hot!', timerSeconds: 60 }
+      ]
+    });
+  }
 
   return recommendations;
 }
