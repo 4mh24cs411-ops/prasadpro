@@ -34,8 +34,9 @@ export default function Navbar() {
   const handleSearchSubmit = (e) => {
     e.preventDefault();
     if (searchQuery.trim()) {
-      navigate(`/recipes?search=${encodeURIComponent(searchQuery.trim())}`);
+      navigate(`/ingredient-scanner?search=${encodeURIComponent(searchQuery.trim())}`);
       setIsMenuOpen(false);
+      setSearchQuery('');
     }
   };
 
@@ -47,8 +48,8 @@ export default function Navbar() {
 
   const navItems = [
     { path: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
-    { path: '/meal-planner', label: 'Meal Planner', icon: CalendarDays, badge: 'AI' },
-    { path: '/ingredient-scanner', label: 'AI Ingredient & Recipe Scanner', icon: Scan, badge: 'OCR' },
+    { path: '/meal-planner', label: 'AI Meal Planner', icon: CalendarDays, badge: 'AI' },
+    { path: '/ingredient-scanner', label: 'FitGen AI Assistant & Recipe Generator', icon: Scan, badge: 'All-in-One' },
     {
       path: '/grocery',
       label: 'Grocery List',

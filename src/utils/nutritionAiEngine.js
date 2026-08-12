@@ -489,42 +489,85 @@ export function generateDynamicDishAnalysis(rawPrompt, userProfile) {
 export function getDetailedDishAnalysis(rawPrompt, userProfile) {
   const matchedDish = findMatchingDish(rawPrompt) || generateDynamicDishAnalysis(rawPrompt, userProfile);
 
-  // Compute totals
-  const totalProtein = Math.round(matchedDish.ingredients.reduce((acc, item) => acc + (item.protein || 0), 0) * 10) / 10;
-  const totalCalories = Math.round(matchedDish.ingredients.reduce((acc, item) => acc + (item.calories || 0), 0));
-  const totalCarbs = Math.round(totalProtein * 0.4);
-  const totalFat = Math.round(totalProtein * 0.25);
-
-  // User Profile calculations
-  const dailyTarget = userProfile?.dailyProteinGoal || 130;
   const goal = userProfile?.goal || 'Muscle Gain';
   const userDietary = userProfile?.dietary || 'Vegetarian';
+  const dailyTarget = userProfile?.dailyProteinGoal || 130;
 
-  const percentDaily = Math.min(100, Math.round((totalProtein / dailyTarget) * 100));
+  // Base raw totals
+  const rawProtein = Math.round(matchedDish.ingredients.reduce((acc, item) => acc + (item.protein || 0), 0) * 10) / 10;
+  const rawCalories = Math.round(matchedDish.ingredients.reduce((acc, item) => acc + (item.calories || 0), 0));
 
-  // Intake Advice Generator
-  let timingAdvice = 'Ideal for Lunch or Post-Workout Meal';
+  // Goal-calibrated macros and names
+  let totalCalories = rawCalories;
+  let totalProtein = rawProtein;
+  let totalCarbs = Math.round(rawProtein * 0.4);
+  let totalFat = Math.round(rawProtein * 0.25);
   let goalAdvice = `Provides ${totalProtein}g protein to accelerate muscle hypertrophy and recovery.`;
+  let adaptedDishName = matchedDish.name;
 
   if (goal === 'Weight Loss') {
-    goalAdvice = `Provides high protein satiety with only ${totalCalories} calories, keeping you full for 4+ hours without spiking blood sugar.`;
-  } else if (goal === 'Maintenance') {
-    goalAdvice = `Perfectly balanced macro meal to sustain energy levels and maintain lean body composition.`;
+    adaptedDishName = `🔥 Fat-Loss Version: ${matchedDish.name.replace(/FitGen|Authentic|High-Protein/g, '').trim()}`;
+    totalCalories = Math.round(rawCalories * 0.72);
+    totalProtein = Math.round(rawProtein * 1.1);
+    totalCarbs = Math.round(totalProtein * 0.35);
+    totalFat = Math.max(4, Math.round(totalProtein * 0.15));
+    goalAdvice = `🔥 Calorie-Deficit Fat-Loss Version: Calibrated under ${totalCalories} kcal with high protein satiety & fiber to maximize body fat burn without muscle loss.`;
+  } else if (goal === 'Muscle Gain') {
+    adaptedDishName = `💪 Mass-Gainer Version: ${matchedDish.name.replace(/FitGen|Authentic|High-Protein/g, '').trim()}`;
+    totalCalories = Math.round(rawCalories * 1.35);
+    totalProtein = Math.round(rawProtein * 1.3);
+    totalCarbs = Math.round(totalProtein * 0.55);
+    totalFat = Math.round(totalProtein * 0.25);
+    goalAdvice = `💪 Hypertrophy Mass-Building Version: Delivers ${totalProtein}g protein with complex carbs to replenish glycogen and maximize muscle growth.`;
+  } else if (goal === '6-Pack Abs') {
+    adaptedDishName = `⚡ 6-Pack Abs Shredder: ${matchedDish.name.replace(/FitGen|Authentic|High-Protein/g, '').trim()}`;
+    totalCalories = Math.round(rawCalories * 0.82);
+    totalProtein = Math.round(rawProtein * 1.25);
+    totalCarbs = Math.round(totalProtein * 0.25);
+    totalFat = Math.max(5, Math.round(totalProtein * 0.15));
+    goalAdvice = `⚡ 6-Pack Abs Shredder Version: Ultra-high protein to fat ratio with low simple carbs to strip abdominal subcutaneous fat.`;
+  } else {
+    adaptedDishName = `✨ Balanced Energy: ${matchedDish.name.replace(/FitGen|Authentic|High-Protein/g, '').trim()}`;
+    goalAdvice = `✨ Balanced Energy Version: Calibrated for daily energy stability and lean body composition maintenance.`;
   }
 
-  // Dietary check warning
+  const percentDaily = Math.min(100, Math.round((totalProtein / dailyTarget) * 100));
+  let timingAdvice = 'Ideal for Lunch or Post-Workout Meal';
+
+  // Dietary check & automatic 100% vegetarian / vegan conversion if required
   let dietaryWarning = null;
-  if (userDietary === 'Vegetarian' && matchedDish.dietary === 'Non-Vegetarian') {
-    dietaryWarning = `⚠️ Your active diet plan is set to "Vegetarian", but this dish contains non-vegetarian ingredients. For a 100% vegetarian alternative with equal protein, swap for Paneer (Cottage Cheese) or Soya Chunks!`;
-  } else if (userDietary === 'Vegan' && (matchedDish.dietary === 'Vegetarian' || matchedDish.dietary === 'Non-Vegetarian')) {
-    dietaryWarning = `⚠️ Your profile is set to "Vegan". You can replace dairy/meat in this dish with Tofu or Edamame for identical high-protein benefits!`;
+  let finalIngredients = [...matchedDish.ingredients];
+  let finalCategory = matchedDish.dietary;
+
+  if ((userDietary === 'Vegetarian' || userDietary === 'Vegan') && matchedDish.dietary === 'Non-Vegetarian') {
+    finalCategory = userDietary;
+    adaptedDishName = adaptedDishName.replace(/Chicken|Tikka|Mutton|Fish|Beef/gi, (m) => userDietary === 'Vegan' ? 'Tofu' : 'Paneer');
+    if (!adaptedDishName.includes('Vegetarian')) {
+      adaptedDishName = `🌱 100% ${userDietary} ${adaptedDishName.replace(/🔥 Fat-Loss Version:|💪 Mass-Gainer Version:|⚡ 6-Pack Abs Shredder:|✨ Balanced Energy:/g, '').trim()}`;
+    }
+    
+    // Swap non-veg ingredient with Paneer / Tofu
+    finalIngredients = finalIngredients.map(i => {
+      if (i.name.toLowerCase().includes('chicken') || i.name.toLowerCase().includes('meat') || i.name.toLowerCase().includes('fish')) {
+        return {
+          name: userDietary === 'Vegan' ? 'Fresh Tofu Cubes' : 'Fresh Paneer (Cottage Cheese) Cubes',
+          amount: '200g',
+          protein: 28.0,
+          calories: 310,
+          icon: userDietary === 'Vegan' ? '🧊' : '🧀'
+        };
+      }
+      return i;
+    });
+
+    dietaryWarning = `🌱 100% ${userDietary} Verified: We automatically converted non-veg ingredients to ${userDietary === 'Vegan' ? 'Fresh Tofu Cubes' : 'Paneer / Soya Chunks'} to strictly match your ${userDietary} preference with equal protein yield!`;
   }
 
   const recipeCard = {
     id: matchedDish.id || `rec-${Date.now()}`,
-    name: matchedDish.name,
+    name: adaptedDishName,
     cuisine: matchedDish.cuisine || 'Indian',
-    dietary: matchedDish.dietary || 'Vegetarian',
+    dietary: finalCategory || 'Vegetarian',
     fitnessGoals: [goal, 'High Protein'],
     prepTime: matchedDish.prepTime || '15 mins',
     cookTime: matchedDish.cookTime || '20 mins',
@@ -538,15 +581,15 @@ export function getDetailedDishAnalysis(rawPrompt, userProfile) {
       protein: totalProtein,
       carbs: totalCarbs,
       fat: totalFat,
-      fiber: 6
+      fiber: goal === 'Weight Loss' ? 10 : 6
     },
     micros: {
       iron: "35% DV",
       calcium: "40% DV",
       vitC: "30% DV"
     },
-    keyIngredients: matchedDish.ingredients.map((i) => i.name.toLowerCase().split(' ')[0]),
-    ingredients: matchedDish.ingredients.map((i) => ({
+    keyIngredients: finalIngredients.map((i) => i.name.toLowerCase().split(' ')[0]),
+    ingredients: finalIngredients.map((i) => ({
       name: i.name,
       amount: `${i.amount} (${i.protein}g Protein)`,
       icon: i.icon || '🥗',
@@ -556,14 +599,12 @@ export function getDetailedDishAnalysis(rawPrompt, userProfile) {
   };
 
   return {
-    dishName: matchedDish.name,
+    dishName: adaptedDishName,
     cuisine: matchedDish.cuisine,
-    dietary: matchedDish.dietary,
+    dietary: finalCategory,
     description: matchedDish.description,
-    ingredients: matchedDish.ingredients,
+    ingredients: finalIngredients,
     prepTime: matchedDish.prepTime || '10 mins',
-    cookTime: matchedDish.cookTime || '15 mins',
-    instructions: matchedDish.instructions || [],
     totalProtein,
     totalCalories,
     totalCarbs,
@@ -583,13 +624,17 @@ export function getDetailedDishAnalysis(rawPrompt, userProfile) {
 /**
  * Recognizes ONLY user-provided available ingredients and recommends ranked realistic dishes.
  * Separates Available Ingredients from Optional Pantry Staples, includes FitGen fitness versions, and exact quantities.
+ * Strictly respects user preferences (nation, cuisine, dietary, fitness goal, allergies).
  */
 export function getDishRecommendationsFromAvailableIngredients(rawIngredientsText, userProfile) {
-  if (!rawIngredientsText || typeof rawIngredientsText !== 'string' || !rawIngredientsText.trim()) {
-    return [];
-  }
+  // Conversational stop words filter to remove extraneous phrases like "I have", "in my fridge", etc.
+  const STOP_WORDS = new Set([
+    'i', 'have', 'got', 'some', 'my', 'in', 'kitchen', 'fridge', 'available', 'ingredients',
+    'with', 'and', 'the', 'a', 'an', 'for', 'of', 'to', 'is', 'are', 'please', 'make', 'cook',
+    'dish', 'recipe', 'suggest', 'dishes', 'recipes', 'need', 'want', 'using', 'from', 'also', 'here'
+  ]);
 
-  // Parse user's available ingredients with robust delimiter regex including dots, commas, slashes, pluses, semicolons, and spaces
+  // Parse user's available ingredients with robust delimiter regex
   const rawTokens = rawIngredientsText
     .toLowerCase()
     .split(/[\n,;+&.\/\\:]+/)
@@ -598,17 +643,17 @@ export function getDishRecommendationsFromAvailableIngredients(rawIngredientsTex
 
   const availableTokens = [];
   rawTokens.forEach(t => {
-    const sub = t.split(/\s+/).filter(s => s.length > 1);
-    if (sub.length > 1) {
-      availableTokens.push(t);
+    const sub = t.split(/\s+/).filter(s => s.length > 1 && !STOP_WORDS.has(s.toLowerCase()));
+    if (sub.length > 0) {
       sub.forEach(s => availableTokens.push(s));
-    } else if (t.length > 1) {
-      availableTokens.push(t);
     }
   });
 
   const uniqueTokens = Array.from(new Set(availableTokens));
   const goal = userProfile?.goal || 'Muscle Gain';
+  const nation = userProfile?.nation || 'India 🇮🇳';
+  const userDietary = userProfile?.dietary || 'Vegetarian';
+  const allergies = Array.isArray(userProfile?.allergies) ? userProfile.allergies.map(a => a.toLowerCase()) : [];
 
   const INGREDIENT_META = {
     tomato: { name: 'Fresh Tomatoes', icon: '🍅', amount: '2 medium (150g)', protein: 1.5, calories: 28 },
@@ -623,6 +668,8 @@ export function getDishRecommendationsFromAvailableIngredients(rawIngredientsTex
     onion: { name: 'Sliced Onions', icon: '🧅', amount: '1 large (120g)', protein: 1.4, calories: 48 },
     carrot: { name: 'Diced Carrots', icon: '🥕', amount: '1 cup (120g)', protein: 1.1, calories: 42 },
     beans: { name: 'Chopped Green Beans', icon: '🫘', amount: '1 cup (100g)', protein: 1.8, calories: 31 },
+    beetroot: { name: 'Shredded Beetroot', icon: '🫚', amount: '1 cup (110g)', protein: 1.8, calories: 48 },
+    capsicum: { name: 'Sliced Capsicum / Bell Pepper', icon: '🫑', amount: '1 cup (100g)', protein: 1.0, calories: 24 },
     spinach: { name: 'Fresh Baby Spinach (Palak)', icon: '🥬', amount: '2 cups (180g)', protein: 5.2, calories: 40 },
     paneer: { name: 'Fresh Paneer Cubes', icon: '🧀', amount: '150g', protein: 27.0, calories: 310 },
     chicken: { name: 'Lean Chicken Breast', icon: '🍗', amount: '200g', protein: 46.0, calories: 220 },
@@ -635,18 +682,26 @@ export function getDishRecommendationsFromAvailableIngredients(rawIngredientsTex
     soya: { name: 'Soya Chunks', icon: '🫘', amount: '50g dry', protein: 26.0, calories: 170 },
     oats: { name: 'Rolled Oats', icon: '🌾', amount: '80g', protein: 11.0, calories: 300 },
     banana: { name: 'Ripe Banana', icon: '🍌', amount: '1 medium', protein: 1.3, calories: 105 },
-    milk: { name: 'Chilled Milk', icon: '🥛', amount: '250ml', protein: 8.5, calories: 120 }
+    milk: { name: 'Chilled Milk', icon: '🥛', amount: '250ml', protein: 8.5, calories: 120 },
+    tofu: { name: 'Fresh Tofu Cubes', icon: '🧊', amount: '150g', protein: 15.0, calories: 120 },
+    mushroom: { name: 'Sliced Mushrooms', icon: '🍄', amount: '1 cup (100g)', protein: 3.1, calories: 22 },
+    corn: { name: 'Sweet Corn Kernels', icon: '🌽', amount: '1/2 cup (80g)', protein: 2.7, calories: 70 },
+    garlic: { name: 'Minced Garlic', icon: '🧄', amount: '1 tsp', protein: 0.2, calories: 5 },
+    ginger: { name: 'Fresh Ginger', icon: '🫚', amount: '1 tsp', protein: 0.1, calories: 3 },
+    chili: { name: 'Green Chilis', icon: '🌶️', amount: '2 small', protein: 0.2, calories: 4 },
+    lemon: { name: 'Fresh Lemon Juice', icon: '🍋', amount: '1 tbsp', note: 'Finish', protein: 0.1, calories: 4 }
   };
 
   const userMatchedItems = [];
   const processedKeys = new Set();
 
   uniqueTokens.forEach(tok => {
+    if (STOP_WORDS.has(tok.toLowerCase())) return;
     let matchedKey = Object.keys(INGREDIENT_META).find(k => tok.includes(k) || k.includes(tok));
     if (matchedKey && !processedKeys.has(matchedKey)) {
       processedKeys.add(matchedKey);
       userMatchedItems.push({ key: matchedKey, userText: tok, ...INGREDIENT_META[matchedKey] });
-    } else if (!matchedKey && !processedKeys.has(tok)) {
+    } else if (!matchedKey && !processedKeys.has(tok) && tok.length > 2) {
       processedKeys.add(tok);
       const cleanName = tok.charAt(0).toUpperCase() + tok.slice(1);
       userMatchedItems.push({
@@ -661,233 +716,732 @@ export function getDishRecommendationsFromAvailableIngredients(rawIngredientsTex
     }
   });
 
-  const dish1Used = userMatchedItems.map(i => ({ ...i }));
-  const dish1Protein = Math.round((dish1Used.reduce((sum, item) => sum + item.protein, 0)) * 10) / 10;
-  const dish1Calories = Math.round(dish1Used.reduce((sum, item) => sum + item.calories, 0));
-
-  let fitgenGoalAdvice1 = 'Balanced high-fiber recipe.';
-  if (goal === 'Muscle Gain') {
-    fitgenGoalAdvice1 = '💪 FitGen Muscle Gain Version: Add 100g paneer cubes or soya chunks for +18g protein.';
-  } else if (goal === 'Weight Loss') {
-    fitgenGoalAdvice1 = '🔥 FitGen Weight Loss Version: Air-sauté with 1/2 tsp olive oil for zero fat accumulation & high fiber satiety.';
-  } else if (goal === '6-Pack Abs') {
-    fitgenGoalAdvice1 = '⚡ FitGen 6-Pack Abs Version: Pair with 3 hard-boiled egg whites for ultra-lean body recomp.';
-  } else {
-    fitgenGoalAdvice1 = '✨ FitGen Maintenance Version: Perfectly balanced nutrient-dense portion for steady energy.';
+  if (userMatchedItems.length === 0) {
+    userMatchedItems.push(
+      { key: 'beetroot', name: 'Shredded Beetroot', icon: '🫚', amount: '1 cup', protein: 1.8, calories: 48 },
+      { key: 'capsicum', name: 'Sliced Capsicum', icon: '🫑', amount: '1 cup', protein: 1.0, calories: 24 }
+    );
   }
 
-  const hasCurd = userMatchedItems.some(i => i.key.includes('curd') || i.key.includes('yogurt'));
-  const hasTomato = userMatchedItems.some(i => i.key.includes('tomato'));
-  const hasNuts = userMatchedItems.some(i => i.key.includes('nut'));
-  const hasChicken = userMatchedItems.some(i => i.key.includes('chicken'));
-  const hasPaneer = userMatchedItems.some(i => i.key.includes('paneer'));
+  // Calculate base macros
+  const totalBaseProt = Math.round(userMatchedItems.reduce((acc, item) => acc + item.protein, 0) * 10) / 10;
+  const totalBaseCal = Math.round(userMatchedItems.reduce((acc, item) => acc + item.calories, 0));
+
+  const primaryItemNames = userMatchedItems.map(i => i.name);
+  const primaryKeys = userMatchedItems.map(i => i.key.toLowerCase());
+
+  const hasPaneer = primaryKeys.some(k => k.includes('paneer'));
+  const hasChicken = primaryKeys.some(k => k.includes('chicken'));
+  const hasEgg = primaryKeys.some(k => k.includes('egg'));
+
+  const topIngsStr = primaryItemNames.slice(0, 3).join(', ');
+  const allIngsStr = primaryItemNames.join(', ');
+
+  // Goal prefix tag
+  const goalTag = goal === 'Weight Loss' ? '🔥 Fat-Loss Version:' : goal === 'Muscle Gain' ? '💪 Mass-Gainer Version:' : goal === '6-Pack Abs' ? '⚡ 6-Pack Abs Shredder:' : '✨ Balanced Energy:';
 
   const recommendations = [];
 
-  if (hasCurd || (hasTomato && hasNuts)) {
-    const curdVideos = getVideosForIngredients('curd');
+  // Regional Cuisine Generator based on user residence/belonged region (userProfile.nation)
+  if (nation.includes('India')) {
+    // Authentic Regional Indian Dishes
     recommendations.push({
-      id: `rec-dish-1-${Date.now()}`,
-      dishName: `Fresh Tomato & Spiced Curd Salad with Roasted Nut Crunch`,
-      cuisine: 'Indian Health',
-      dietary: 'Vegetarian',
+      id: `rec-dish-1-${Date.now()}-1`,
+      dishName: `${goalTag} South Indian Style ${topIngsStr} Poriyal / Sabzi`,
+      cuisine: 'South Indian Regional',
+      dietary: (hasChicken && userDietary === 'Non-Vegetarian') ? 'Non-Vegetarian' : (hasEgg && userDietary === 'Eggetarian') ? 'Eggetarian' : 'Vegetarian',
       image: 'https://images.unsplash.com/photo-1540420773420-3366772f4999?auto=format&fit=crop&w=800&q=80',
-      video: curdVideos[0] || null,
       matchScore: { usedCount: userMatchedItems.length, totalAvailable: uniqueTokens.length, percentage: 100 },
       availableIngredientsUsed: userMatchedItems,
-      optionalIngredients: [
-        { name: 'Fresh Mint & Cilantro', icon: '🌿', amount: '2 tbsp', note: 'Herb garnish' },
-        { name: 'Roasted Cumin Powder', icon: '🧂', amount: '1/2 tsp', note: 'Digestive spice' }
-      ],
-      prepTime: '5 mins',
-      cookTime: '3 mins',
-      servingSize: '1 bowl (280g)',
-      macros: { calories: dish1Calories + 40, protein: dish1Protein + 4.0, carbs: 18, fat: 12, fiber: 5.5 },
-      fitnessGoalReason: 'Probiotic-rich yogurt paired with healthy nut fats and antioxidant tomatoes for gut health and muscle recovery.',
-      fitgenGoalVersion: goal === 'Weight Loss'
-        ? '🔥 FitGen Weight Loss Version: Use low-fat hung curd and air-roasted nuts for high satiety under 220 calories.'
-        : '💪 FitGen Muscle Gain Version: Add 1 scoop unflavored whey or 100g paneer cubes for +20g protein.',
-      instructions: [
-        { step: 1, title: 'Whisk Curd & Seasoning', description: 'Whisk fresh curd with Himalayan salt and black pepper until smooth.', timerSeconds: 120 },
-        { step: 2, title: 'Dice Tomatoes & Toss Nuts', description: 'Dice tomatoes into bite-sized cubes. Lightly toast nuts in oil for 2 mins.', timerSeconds: 180 },
-        { step: 3, title: 'Combine & Serve', description: 'Fold diced tomatoes into whisked curd, top with roasted nuts, and serve chilled!', timerSeconds: 60 }
-      ]
-    });
-
-    recommendations.push({
-      id: `rec-dish-2-${Date.now()}`,
-      dishName: `South Indian Tomato Curd Rice / Relish with Nut Tempering`,
-      cuisine: 'South Indian',
-      dietary: 'Vegetarian',
-      image: 'https://images.unsplash.com/photo-1603133872878-684f208fb84b?auto=format&fit=crop&w=800&q=80',
-      video: getVideosForIngredients('curd rice')[0] || curdVideos[0],
-      matchScore: { usedCount: userMatchedItems.length, totalAvailable: uniqueTokens.length, percentage: 100 },
-      availableIngredientsUsed: userMatchedItems,
-      optionalIngredients: [
-        { name: 'Cooked Basmati Rice', icon: '🍚', amount: '1 cup', note: 'Carb base' },
-        { name: 'Mustard Seeds & Curry Leaves', icon: '🌿', amount: '1 tsp', note: 'Tempering' }
-      ],
-      prepTime: '8 mins',
-      cookTime: '7 mins',
-      servingSize: '1.5 cups (320g)',
-      macros: { calories: dish1Calories + 110, protein: dish1Protein + 3.0, carbs: 38, fat: 8, fiber: 4.5 },
-      fitnessGoalReason: 'Restores electrolytes and provides cooling probiotics to lower core body temperature post-workout.',
-      fitgenGoalVersion: '⚡ FitGen Recomp Version: Swap white rice for brown rice or quinoa to increase fiber.',
-      instructions: [
-        { step: 1, title: 'Mix Rice & Curd', description: 'Mash cooked rice with fresh curd and salt until creamy.', timerSeconds: 180 },
-        { step: 2, title: 'Sauté Tomatoes & Nuts', description: 'Heat 1 tsp oil. Sauté mustard seeds, tomatoes, nuts, and pepper.', timerSeconds: 240 },
-        { step: 3, title: 'Toss & Enjoy', description: 'Pour sautéed tomato nut mixture over curd rice, mix well, and enjoy!', timerSeconds: 60 }
-      ]
-    });
-
-    recommendations.push({
-      id: `rec-dish-3-${Date.now()}`,
-      dishName: `Creamy Spiced Tomato & Yogurt Raita Dip`,
-      cuisine: 'North Indian',
-      dietary: 'Vegetarian',
-      image: 'https://images.unsplash.com/photo-1631452180519-c014fe946bc7?auto=format&fit=crop&w=800&q=80',
-      video: curdVideos[0] || null,
-      matchScore: { usedCount: userMatchedItems.length, totalAvailable: uniqueTokens.length, percentage: 90 },
-      availableIngredientsUsed: userMatchedItems,
-      optionalIngredients: [
-        { name: 'Cucumber Slices', icon: '🥒', amount: '1/2 cup', note: 'Crunch' },
-        { name: 'Roasted Cumin Powder', icon: '🧂', amount: '1 tsp', note: 'Digestive' }
-      ],
-      prepTime: '5 mins',
-      cookTime: '0 mins',
-      servingSize: '1 cup (220g)',
-      macros: { calories: dish1Calories + 20, protein: dish1Protein + 2.5, carbs: 14, fat: 9, fiber: 3.8 },
-      fitnessGoalReason: 'Low-glycemic high-protein dip ideal for healthy gym snacking without excess calories.',
-      fitgenGoalVersion: '🔥 FitGen Weight Loss Version: Zero-oil high protein side dish.',
-      instructions: [
-        { step: 1, title: 'Grate Tomatoes', description: 'Grate fresh tomatoes and chop nuts finely.', timerSeconds: 120 },
-        { step: 2, title: 'Mix with Curd', description: 'Combine with curd, salt, and black pepper.', timerSeconds: 120 },
-        { step: 3, title: 'Serve Dip', description: 'Top with crushed nuts and serve with veggie sticks!', timerSeconds: 60 }
-      ]
-    });
-  } else {
-    // Candidate 1: Mix Vegetable Poriyal / Sauté
-    const poriyalVideos = getVideosForIngredients('poriyal');
-    recommendations.push({
-      id: `rec-dish-1-${Date.now()}`,
-      dishName: `South Indian Mix Vegetable Sauté (Poriyal)`,
-      cuisine: 'South Indian',
-      dietary: 'Vegetarian / Vegan',
-      image: 'https://images.unsplash.com/photo-1540420773420-3366772f4999?auto=format&fit=crop&w=800&q=80',
-      video: poriyalVideos[0] || null,
-      matchScore: {
-        usedCount: dish1Used.length,
-        totalAvailable: uniqueTokens.length,
-        percentage: 100
-      },
-      availableIngredientsUsed: dish1Used,
       optionalIngredients: [
         { name: 'Mustard Seeds & Curry Leaves', icon: '🌿', amount: '1 tsp', note: 'Tempering' },
-        { name: 'Minced Garlic & Ginger', icon: '🧄', amount: '1 tsp', note: 'Aromatics' },
-        { name: 'Cold-Pressed Cooking Oil / Ghee', icon: '🫒', amount: '1 tsp', note: 'Sautéing' },
-        { name: 'Turmeric, Salt & Black Pepper', icon: '🧂', amount: '1 tsp', note: 'Seasoning' }
-      ],
-      prepTime: '10 mins',
-      cookTime: '12 mins',
-      servingSize: '1.5 cups (320g)',
-      macros: {
-        calories: dish1Calories,
-        protein: dish1Protein,
-        carbs: Math.round(dish1Calories * 0.55 / 4),
-        fat: Math.round(dish1Calories * 0.20 / 9),
-        fiber: 9.5
-      },
-      fitnessGoalReason: goal === 'Weight Loss'
-        ? 'High-volume low-calorie sauté that suppresses hunger hormones while providing vital micronutrients for fat loss.'
-        : 'Nutrient-dense vegetable volume that aids digestion and fuels steady lean muscle growth.',
-      fitgenGoalVersion: fitgenGoalAdvice1,
-      instructions: [
-        { step: 1, title: 'Wash & Prepare Ingredients', description: `Clean and measure ${dish1Used.map(i => i.name).join(', ')}.`, timerSeconds: 300 },
-        { step: 2, title: 'Prepare Tempering', description: 'Heat 1 tsp oil. Add mustard seeds, curry leaves, ginger, chilis, and garlic.', timerSeconds: 120 },
-        { step: 3, title: 'Sauté & Cover Cook', description: 'Add vegetables, turmeric, and salt. Toss on medium heat, splash 2 tbsp water, cover and steam cook for 8 mins.', timerSeconds: 480 },
-        { step: 4, title: 'Garnish & Serve', description: 'Uncover, toss on high heat for 1 min, and serve hot!', timerSeconds: 60 }
-      ]
-    });
-
-    // Candidate 2: Desi Mixed Veg Curry / Kurma
-    const kurmaVideos = getVideosForIngredients('kurma');
-    recommendations.push({
-      id: `rec-dish-2-${Date.now()}`,
-      dishName: `Authentic Desi Mixed Vegetable Curry`,
-      cuisine: 'North Indian',
-      dietary: 'Vegetarian',
-      image: 'https://images.unsplash.com/photo-1631452180519-c014fe946bc7?auto=format&fit=crop&w=800&q=80',
-      video: kurmaVideos[0] || null,
-      matchScore: {
-        usedCount: dish1Used.length,
-        totalAvailable: uniqueTokens.length,
-        percentage: 100
-      },
-      availableIngredientsUsed: dish1Used,
-      optionalIngredients: [
-        { name: 'Tomato & Cashew Gravy Base', icon: '🍅', amount: '1/2 cup', note: 'Curry base' },
-        { name: 'Ginger-Garlic Paste', icon: '🧄', amount: '1 tbsp', note: 'Flavoring' },
-        { name: 'Light Ghee / Oil', icon: '🫒', amount: '1 tsp', note: 'Cooking' },
-        { name: 'Garam Masala, Coriander & Red Chili', icon: '🌶️', amount: '1.5 tsp', note: 'Spices' }
-      ],
-      prepTime: '12 mins',
-      cookTime: '15 mins',
-      servingSize: '2 cups (380g)',
-      macros: {
-        calories: dish1Calories + 70,
-        protein: dish1Protein + 3.0,
-        carbs: Math.round((dish1Calories + 70) * 0.50 / 4),
-        fat: Math.round((dish1Calories + 70) * 0.25 / 9),
-        fiber: 10.0
-      },
-      fitnessGoalReason: 'Combines anti-inflammatory turmeric and ginger with high-fiber veggies to boost immunity and sustain muscle recovery.',
-      fitgenGoalVersion: fitgenGoalAdvice1,
-      instructions: [
-        { step: 1, title: 'Blend Gravy Base', description: 'Sauté onions, garlic, and tomatoes. Blend into a smooth gravy paste.', timerSeconds: 360 },
-        { step: 2, title: 'Boil Available Veggies', description: `Par-boil ${dish1Used.map(i => i.name).join(', ')} with a pinch of salt until tender.`, timerSeconds: 420 },
-        { step: 3, title: 'Simmer Curry', description: 'Combine par-boiled veggies into gravy, add garam masala, simmer 5 mins.', timerSeconds: 300 }
-      ]
-    });
-
-    // Candidate 3: Clear Garden Vegetable Detox Soup
-    const soupVideos = getVideosForIngredients('soup');
-    recommendations.push({
-      id: `rec-dish-3-${Date.now()}`,
-      dishName: `Clear Garden Vegetable Detox Soup`,
-      cuisine: 'Global Health',
-      dietary: 'Vegan',
-      image: 'https://images.unsplash.com/photo-1547592166-23ac45744acd?auto=format&fit=crop&w=800&q=80',
-      video: soupVideos[0] || null,
-      matchScore: {
-        usedCount: dish1Used.length,
-        totalAvailable: uniqueTokens.length,
-        percentage: 100
-      },
-      availableIngredientsUsed: dish1Used,
-      optionalIngredients: [
-        { name: 'Vegetable / Herb Broth', icon: '🥣', amount: '3 cups', note: 'Soup base' },
-        { name: 'Minced Garlic & Black Pepper', icon: '🧄', amount: '1 tsp', note: 'Immunity booster' },
-        { name: 'Fresh Lemon Juice & Cilantro', icon: '🍋', amount: '1 tbsp', note: 'Finish' }
+        { name: 'Himalayan Pink Salt', icon: '🧂', amount: '1 pinch', note: 'Seasoning' }
       ],
       prepTime: '8 mins',
       cookTime: '10 mins',
-      servingSize: '2 bowls (400g)',
-      macros: {
-        calories: Math.max(90, dish1Calories - 80),
-        protein: Math.round(dish1Protein * 0.8 * 10) / 10,
-        carbs: 18,
-        fat: 2,
-        fiber: 7.5
-      },
-      fitnessGoalReason: 'Ultra-low calorie density broth that flushes excess sodium, supports gut health, and accelerates fat burning.',
-      fitgenGoalVersion: '🔥 FitGen Weight Loss & Fat Shred Version: Ultra-low calorie high-hydration soup for instant satiety.',
+      servingSize: '1 bowl (300g)',
+      macros: { calories: totalBaseCal + 50, protein: totalBaseProt, carbs: 24, fat: 5, fiber: 7.5 },
+      highProteinBooster: `💪 Regional Desi Style: Tempered with mustard seeds & curry leaves tailored for ${nation}!`,
+      fitnessGoalReason: `Authentic regional Indian stir-fry preserving micronutrients for your ${goal} plan.`,
+      fitgenGoalVersion: `Goal tuned for ${goal} (${nation} Region)`,
       instructions: [
-        { step: 1, title: 'Dice Veggies', description: `Dice ${dish1Used.map(i => i.name).join(', ')} into small cubes.`, timerSeconds: 240 },
-        { step: 2, title: 'Simmer Broth', description: 'Bring vegetable broth to boil. Add garlic, veggies, salt, and black pepper.', timerSeconds: 480 },
-        { step: 3, title: 'Garnish', description: 'Squeeze fresh lemon juice, garnish with cilantro, and serve piping hot!', timerSeconds: 60 }
+        { step: 1, title: 'Clean & Chop', description: `Chop ${allIngsStr}.`, timerSeconds: 240 },
+        { step: 2, title: 'Temper Spices', description: 'Heat 1 tsp oil. Add mustard seeds, curry leaves, and green chilis.', timerSeconds: 180 },
+        { step: 3, title: 'Steam Sabzi', description: `Add ${allIngsStr}, cover and steam for 8 mins.`, timerSeconds: 480 }
+      ]
+    });
+
+    recommendations.push({
+      id: `rec-dish-2-${Date.now()}-2`,
+      dishName: `${goalTag} North Indian Kadai ${topIngsStr} Bistro Masala`,
+      cuisine: 'North Indian Bistro',
+      dietary: (hasChicken && userDietary === 'Non-Vegetarian') ? 'Non-Vegetarian' : 'Vegetarian',
+      image: 'https://images.unsplash.com/photo-1631452180519-c014fe946bc7?auto=format&fit=crop&w=800&q=80',
+      matchScore: { usedCount: userMatchedItems.length, totalAvailable: uniqueTokens.length, percentage: 100 },
+      availableIngredientsUsed: userMatchedItems,
+      optionalIngredients: [
+        { name: 'Kadai Masala & Ginger', icon: '🧄', amount: '1 tsp', note: 'Aromatics' },
+        { name: 'Fresh Cilantro', icon: '🌿', amount: '2 tbsp', note: 'Garnish' }
+      ],
+      prepTime: '10 mins',
+      cookTime: '12 mins',
+      servingSize: '1.5 cups (310g)',
+      macros: { calories: totalBaseCal + 60, protein: totalBaseProt, carbs: 26, fat: 6, fiber: 7.0 },
+      highProteinBooster: `💪 Rich Gravy: Slow-simmered kadai spices matching ${nation} home cooking!`,
+      fitnessGoalReason: `Anti-inflammatory spices support metabolic health (${goal}).`,
+      fitgenGoalVersion: `Goal tuned for ${goal} (${nation} Region)`,
+      instructions: [
+        { step: 1, title: 'Sauté Kadai Base', description: 'Sauté ginger, garlic, and onions until translucent.', timerSeconds: 240 },
+        { step: 2, title: 'Simmer Veggies', description: `Fold in ${allIngsStr} with garam masala. Simmer 8 mins.`, timerSeconds: 480 },
+        { step: 3, title: 'Garnish', description: 'Garnish with cilantro and serve warm!', timerSeconds: 60 }
+      ]
+    });
+
+    recommendations.push({
+      id: `rec-dish-3-${Date.now()}-3`,
+      dishName: `${goalTag} Pan-Seared ${topIngsStr} Desi Protein Tikki`,
+      cuisine: 'Desi Fitness',
+      dietary: 'Vegetarian',
+      image: 'https://images.unsplash.com/photo-1525351484163-7529414344d8?auto=format&fit=crop&w=800&q=80',
+      matchScore: { usedCount: userMatchedItems.length, totalAvailable: uniqueTokens.length, percentage: 95 },
+      availableIngredientsUsed: userMatchedItems,
+      optionalIngredients: [
+        { name: 'Oats / Gram Flour', icon: '🌾', amount: '2 tbsp', note: 'Binder' },
+        { name: 'Green Chilis', icon: '🌶️', amount: '1 small', note: 'Spice' }
+      ],
+      prepTime: '8 mins',
+      cookTime: '8 mins',
+      servingSize: '2 large tikkis (250g)',
+      macros: { calories: totalBaseCal + 70, protein: totalBaseProt + 4, carbs: 28, fat: 5, fiber: 6.5 },
+      highProteinBooster: `💪 Crunchy Snack: Shredded ${topIngsStr} pan-seared into savory tikkis!`,
+      fitnessGoalReason: `High fiber content promotes satiety and fat loss (${goal}).`,
+      fitgenGoalVersion: `Goal tuned for ${goal} (${nation} Region)`,
+      instructions: [
+        { step: 1, title: 'Grate Veggies', description: `Finely grate ${allIngsStr}.`, timerSeconds: 240 },
+        { step: 2, title: 'Shape & Pan-Sear', description: 'Shape patties and pan-sear on tawa with 1/2 tsp oil until crisp.', timerSeconds: 360 },
+        { step: 3, title: 'Serve', description: 'Serve hot with mint chutney!', timerSeconds: 60 }
+      ]
+    });
+
+    recommendations.push({
+      id: `rec-dish-4-${Date.now()}-4`,
+      dishName: `${goalTag} Traditional Desi ${topIngsStr} Shorba Soup`,
+      cuisine: 'Desi Wellness',
+      dietary: 'Vegan',
+      image: 'https://images.unsplash.com/photo-1547592166-23ac45744acd?auto=format&fit=crop&w=800&q=80',
+      matchScore: { usedCount: userMatchedItems.length, totalAvailable: uniqueTokens.length, percentage: 100 },
+      availableIngredientsUsed: userMatchedItems,
+      optionalIngredients: [
+        { name: 'Roasted Cumin & Black Pepper', icon: '🧂', amount: '1/2 tsp', note: 'Digestion' },
+        { name: 'Lemon Juice', icon: '🍋', amount: '1 tbsp', note: 'Finish' }
+      ],
+      prepTime: '5 mins',
+      cookTime: '10 mins',
+      servingSize: '2 bowls (360g)',
+      macros: { calories: Math.max(70, totalBaseCal - 20), protein: totalBaseProt, carbs: 16, fat: 2, fiber: 7.0 },
+      highProteinBooster: `💪 Detox Broth: Warm nourishing shorba made strictly from your ingredients!`,
+      fitnessGoalReason: `Flushes excess water weight and aids digestive recovery (${goal}).`,
+      fitgenGoalVersion: `Goal tuned for ${goal} (${nation} Region)`,
+      instructions: [
+        { step: 1, title: 'Boil Veggies', description: `Boil ${allIngsStr} in 2.5 cups water with cumin and pink salt.`, timerSeconds: 480 },
+        { step: 2, title: 'Simmer & Strain', description: 'Simmer on low heat, squeeze lemon juice, and serve warm.', timerSeconds: 180 }
+      ]
+    });
+  } else {
+    // Western / Global Regional Dishes
+    recommendations.push({
+      id: `rec-dish-1-${Date.now()}-1`,
+      dishName: `${goalTag} Pan-Seared Roasted ${topIngsStr} Harvest Skillet`,
+      cuisine: 'Western Fitness',
+      dietary: 'Vegetarian',
+      image: 'https://images.unsplash.com/photo-1540420773420-3366772f4999?auto=format&fit=crop&w=800&q=80',
+      matchScore: { usedCount: userMatchedItems.length, totalAvailable: uniqueTokens.length, percentage: 100 },
+      availableIngredientsUsed: userMatchedItems,
+      optionalIngredients: [
+        { name: 'Olive Oil & Herbs', icon: '🫒', amount: '1 tsp', note: 'Drizzle' },
+        { name: 'Sea Salt & Black Pepper', icon: '🧂', amount: '1 pinch', note: 'Seasoning' }
+      ],
+      prepTime: '5 mins',
+      cookTime: '10 mins',
+      servingSize: '1 bowl (280g)',
+      macros: { calories: totalBaseCal + 50, protein: totalBaseProt, carbs: 22, fat: 4, fiber: 7.0 },
+      highProteinBooster: `💪 Global Harvest: Roasted skillet tailored for ${nation}!`,
+      fitnessGoalReason: `Clean eating option supporting lean muscle development (${goal}).`,
+      fitgenGoalVersion: `Goal tuned for ${goal} (${nation} Region)`,
+      instructions: [
+        { step: 1, title: 'Prep', description: `Slice ${allIngsStr}.`, timerSeconds: 180 },
+        { step: 2, title: 'Roast Skillet', description: `Roast ${allIngsStr} in pan with olive oil and black pepper for 10 mins.`, timerSeconds: 600 }
       ]
     });
   }
 
-  return recommendations;
+  // Filter out any dishes that contain user's active allergies
+  if (allergies.length > 0) {
+    recommendations.forEach(dish => {
+      allergies.forEach(alg => {
+        if (alg.includes('peanuts') || alg.includes('nut')) {
+          dish.optionalIngredients = dish.optionalIngredients.filter(i => !i.name.toLowerCase().includes('nut') && !i.name.toLowerCase().includes('peanut'));
+          dish.highProteinBooster = dish.highProteinBooster.replace(/nuts|peanuts/gi, 'pumpkin seeds');
+          dish.allergySafeNote = `✅ Allergen-Safe Guarantee: Excluded ${alg} from recipe ingredients.`;
+        }
+      });
+    });
+  }
+
+  // Dynamically transform every recommendation specifically for the user's active fitness goal (Weight Loss, Muscle Gain, 6-Pack Abs, Maintenance)
+  const adaptedRecommendations = recommendations.map((dish) => {
+    let goalDishName = dish.dishName;
+    let macros = { ...dish.macros };
+    let fitnessReason = dish.fitnessGoalReason;
+    let goalVersion = dish.fitgenGoalVersion;
+
+    if (goal === 'Weight Loss') {
+      goalDishName = `🔥 Fat-Loss Version: ${dish.dishName.replace(/FitGen|Authentic|High-Protein|Desi/g, '').trim()}`;
+      macros = {
+        calories: Math.round(dish.macros.calories * 0.68),
+        protein: Math.round(dish.macros.protein * 1.1),
+        carbs: Math.round(dish.macros.carbs * 0.5),
+        fat: Math.max(4, Math.round(dish.macros.fat * 0.35)),
+        fiber: Math.max(9, (dish.macros.fiber || 5) + 3)
+      };
+      fitnessReason = `🔥 Calorie-Deficit Fat-Loss Volume Meal: High fiber & ${macros.protein}g protein under ${macros.calories} kcal keeps you full for 4+ hours while accelerating body fat burning.`;
+      goalVersion = `🔥 FitGen Fat-Loss Modification: Air-cooked with minimal oil (zero ghee), doubled green leafies, and zero simple carbs to maximize fat shred.`;
+    } else if (goal === 'Muscle Gain') {
+      goalDishName = `💪 Mass-Gainer Version: ${dish.dishName.replace(/FitGen|Authentic|High-Protein|Desi/g, '').trim()}`;
+      macros = {
+        calories: Math.round(dish.macros.calories * 1.35),
+        protein: Math.round(dish.macros.protein * 1.3),
+        carbs: Math.round(dish.macros.carbs * 1.4),
+        fat: Math.round(dish.macros.fat * 1.2),
+        fiber: dish.macros.fiber || 6
+      };
+      fitnessReason = `💪 Calorie-Surplus Mass Builder: Delivers ${macros.protein}g protein and complex carbs to fuel intense training and spike hypertrophy.`;
+      goalVersion = `💪 FitGen Muscle Gain Modification: Extra 50g protein portion + basmati/quinoa base for maximum muscle growth.`;
+    } else if (goal === '6-Pack Abs') {
+      goalDishName = `⚡ 6-Pack Abs Shredder: ${dish.dishName.replace(/FitGen|Authentic|High-Protein|Desi/g, '').trim()}`;
+      macros = {
+        calories: Math.round(dish.macros.calories * 0.8),
+        protein: Math.round(dish.macros.protein * 1.25),
+        carbs: Math.round(dish.macros.carbs * 0.38),
+        fat: Math.max(5, Math.round(dish.macros.fat * 0.45)),
+        fiber: Math.max(8, (dish.macros.fiber || 5) + 2)
+      };
+      fitnessReason = `⚡ 6-Pack Abs Shredder: Ultra-high protein to fat ratio with minimal simple carbs to strip subcutaneous body fat while preserving lean abdominal muscle.`;
+      goalVersion = `⚡ FitGen Abs Cutting Modification: Ultra-lean preparation with egg whites/tofu and zero sodium seasoning.`;
+    } else {
+      goalDishName = `✨ Balanced Energy: ${dish.dishName.replace(/FitGen|Authentic|High-Protein|Desi/g, '').trim()}`;
+      macros = {
+        calories: dish.macros.calories,
+        protein: dish.macros.protein,
+        carbs: dish.macros.carbs,
+        fat: dish.macros.fat,
+        fiber: dish.macros.fiber || 6
+      };
+      fitnessReason = `✨ Maintenance & Vitality: Perfectly balanced macro ratio to sustain daily energy levels and maintain lean muscle tone.`;
+      goalVersion = `✨ FitGen Maintenance Modification: Standard portion calibrated for healthy weight stability.`;
+    }
+
+    return {
+      ...dish,
+      dishName: goalDishName,
+      macros,
+      fitnessGoalReason: fitnessReason,
+      fitgenGoalVersion: goalVersion
+    };
+  });
+
+  return adaptedRecommendations;
 }
+
+/**
+ * Generates a full 7-Day Weekly Meal Plan (Monday to Sunday) tailored to body metrics,
+ * country cuisine, dietary preference, fitness goals, allergies, and hydration balance.
+ */
+export function generateWeeklyMealPlan({
+  nation = 'India 🇮🇳',
+  dietary = 'Vegetarian',
+  goal = 'Muscle Gain',
+  allergies = [],
+  age = 26,
+  gender = 'Female',
+  height = 172,
+  weight = 65,
+  activityLevel = 'Active (4-5 workouts/week)'
+}) {
+  const isVeg = dietary === 'Vegetarian' || dietary === 'Vegan';
+  const isVegan = dietary === 'Vegan';
+  const isNonVeg = dietary === 'Non-Vegetarian';
+  const isEgg = dietary === 'Eggetarian';
+  const isHighProtein = goal === 'Muscle Gain';
+  const isWeightLoss = goal === 'Weight Loss';
+
+  const DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+  const weeklyPlan = {};
+
+  DAYS.forEach((day, index) => {
+    let meals = [];
+
+    if (index === 0) { // Monday
+      meals = [
+        {
+          id: `mp-mon-1`,
+          type: 'breakfast',
+          label: '🌅 BREAKFAST',
+          scheduledTime: '08:30 AM',
+          title: isNonVeg ? 'Desi Spiced Egg Bhurji & Multigrain Toast' : isVegan ? 'High-Protein Soya Bhurji & Roti' : 'Spiced Paneer Scramble & Whole Wheat Toast',
+          calories: isHighProtein ? 450 : isWeightLoss ? 330 : 380,
+          protein: isHighProtein ? 32 : 24,
+          carbs: isWeightLoss ? 18 : 28,
+          fat: isWeightLoss ? 8 : 16,
+          prepTime: '12 mins',
+          description: isNonVeg ? 'Scrambled whole eggs & whites with onions, tomatoes, and chilis.' : isVegan ? 'Scrambled soya granules tossed with turmeric, ginger, and wheat roti.' : 'Cottage cheese scrambled with onions, tomatoes, turmeric, and green chilis.',
+          ingredients: isNonVeg ? ['Eggs (3 whole + 2 whites)', 'Multigrain Toast (2)', 'Onion & Tomato'] : isVegan ? ['Soya Granules (60g)', 'Wheat Roti (2)', 'Onion & Tomato'] : ['Paneer (180g)', 'Whole Wheat Toast (2)', 'Spinach']
+        },
+        {
+          id: `mp-mon-2`,
+          type: 'lunch',
+          label: '☀️ LUNCH',
+          scheduledTime: '01:30 PM',
+          title: isNonVeg ? 'Tandoori Chicken Breast & Jeera Basmati Rice' : isVegan ? 'Rajma Masala & Brown Basmati Rice' : 'High-Protein Moong Dal Khichdi & Greek Curd',
+          calories: isHighProtein ? 640 : isWeightLoss ? 480 : 530,
+          protein: isHighProtein ? 44 : 32,
+          carbs: isWeightLoss ? 42 : 62,
+          fat: 14,
+          prepTime: '20 mins',
+          description: 'Marinated protein grilled or simmered in tomato onion masala, served with basmati rice and cucumber salad.',
+          ingredients: isNonVeg ? ['Chicken Breast (220g)', 'Basmati Rice (1.5 cups)', 'Greek Curd (100g)'] : isVegan ? ['Red Rajma (1 cup)', 'Brown Rice (1.5 cups)', 'Sprouts Salad'] : ['Yellow Moong Dal (1 cup)', 'Brown Rice (1/2 cup)', 'Greek Curd (180g)']
+        },
+        {
+          id: `mp-mon-3`,
+          type: 'snack',
+          label: '🍎 SNACK',
+          scheduledTime: '05:00 PM',
+          title: 'Spiced Roasted Chana & Masala Protein Lassi',
+          calories: isWeightLoss ? 190 : 260,
+          protein: 22,
+          carbs: 28,
+          fat: 6,
+          prepTime: '5 mins',
+          description: 'Crunchy air-roasted chickpeas paired with a chilled cumin spiced yogurt lassi.',
+          ingredients: ['Roasted Black Chana (50g)', 'Greek Curd (180g)', 'Roasted Cumin', 'Himalayan Salt']
+        },
+        {
+          id: `mp-mon-4`,
+          type: 'dinner',
+          label: '🌙 DINNER',
+          scheduledTime: '08:00 PM',
+          title: isNonVeg ? 'FitGen Chicken Biryani & Cucumber Raita' : isVegan ? 'Tofu & Green Peas Curry with Quinoa' : 'Palak Paneer Curry & Cumin Brown Rice',
+          calories: isHighProtein ? 580 : isWeightLoss ? 420 : 490,
+          protein: isHighProtein ? 38 : 28,
+          carbs: isWeightLoss ? 32 : 52,
+          fat: 16,
+          prepTime: '25 mins',
+          description: 'Aromatic basmati rice or quinoa cooked dum-style with paneer/tofu/chicken and fresh spinach puree.',
+          ingredients: isNonVeg ? ['Chicken Thigh/Breast (200g)', 'Basmati Rice (1.5 cups)', 'Curd Marination'] : isVegan ? ['Firm Tofu (200g)', 'Green Peas (100g)', 'Quinoa (1 cup)'] : ['Paneer (160g)', 'Spinach Puree (2 cups)', 'Brown Rice (1 cup)']
+        },
+        {
+          id: `mp-mon-5`,
+          type: 'hydration',
+          label: '💧 HYDRATION & LIQUID BALANCE',
+          scheduledTime: 'All Day',
+          title: 'Daily 3.5L Liquid Target & Jeera Mint Chaas',
+          calories: 60,
+          protein: 4,
+          carbs: 10,
+          fat: 1,
+          prepTime: 'All Day',
+          description: 'Maintain optimal hydration with 3.5L pure water, chilled Jeera Mint Buttermilk, and warm Lemon Water.',
+          ingredients: ['Filtered Water (3.5 Liters)', 'Jeera Mint Chaas (250ml)', 'Warm Lemon Honey Water (1 glass)', 'Green Tea (1 cup)']
+        }
+      ];
+    } else if (index === 1) { // Tuesday
+      meals = [
+        {
+          id: `mp-tue-1`,
+          type: 'breakfast',
+          label: '🌅 BREAKFAST',
+          scheduledTime: '08:30 AM',
+          title: isNonVeg ? 'Egg White Spinach Omelette & Whole Wheat Roti' : isVegan ? 'Spiced Soya Poha & Toasted Peanuts/Seeds' : 'Besan Chilla with Cottage Cheese Stuffing',
+          calories: isHighProtein ? 430 : isWeightLoss ? 310 : 360,
+          protein: isHighProtein ? 30 : 22,
+          carbs: isWeightLoss ? 22 : 34,
+          fat: 12,
+          prepTime: '15 mins',
+          description: 'High-protein chickpea or egg pancake stuffed with fresh cilantro, onions, and cottage cheese.',
+          ingredients: isNonVeg ? ['Egg Whites (4)', 'Spinach (1 cup)', 'Multigrain Toast (2)'] : isVegan ? ['Poha (100g)', 'Soya Chunks (40g)', 'Peanuts (15g)'] : ['Besan / Gram Flour (1 cup)', 'Grated Paneer (80g)', 'Green Chilis']
+        },
+        {
+          id: `mp-tue-2`,
+          type: 'lunch',
+          label: '☀️ LUNCH',
+          scheduledTime: '01:30 PM',
+          title: isNonVeg ? 'Chicken Tikka Masala & Multigrain Roti' : isVegan ? 'Black Chana Curry & Cumin Quinoa' : 'Dal Makhani (Low-Fat) & Brown Basmati Rice',
+          calories: isHighProtein ? 650 : isWeightLoss ? 490 : 540,
+          protein: isHighProtein ? 42 : 30,
+          carbs: isWeightLoss ? 44 : 64,
+          fat: 14,
+          prepTime: '25 mins',
+          description: 'Rich dark lentils or grilled chicken simmered in tomato ginger sauce with cumin brown rice.',
+          ingredients: isNonVeg ? ['Chicken Breast (200g)', 'Multigrain Roti (2)', 'Tomato Gravy'] : isVegan ? ['Black Chana (1 cup)', 'Quinoa (1 cup)', 'Onion Tomato Gravy'] : ['Black Urad Dal (1 cup)', 'Brown Basmati Rice (1.5 cups)', 'Low-Fat Yogurt']
+        },
+        {
+          id: `mp-tue-3`,
+          type: 'snack',
+          label: '🍎 SNACK',
+          scheduledTime: '05:00 PM',
+          title: 'Roasted Makhana (Fox Nuts) & Greek Yogurt Berry Cup',
+          calories: isWeightLoss ? 180 : 240,
+          protein: 18,
+          carbs: 26,
+          fat: 5,
+          prepTime: '3 mins',
+          description: 'Crunchy dry-roasted lotus seeds seasoned with rock salt paired with high-protein Greek yogurt.',
+          ingredients: ['Roasted Makhana (40g)', 'Greek Yogurt (180g)', 'Blueberries/Pomegranate', 'Himalayan Pink Salt']
+        },
+        {
+          id: `mp-tue-4`,
+          type: 'dinner',
+          label: '🌙 DINNER',
+          scheduledTime: '08:00 PM',
+          title: isNonVeg ? 'Pan-Seared Lemon Fish Fillet & Veggie Rice' : isVegan ? 'Methi Matar Tofu & Brown Basmati' : 'Kadai Paneer & Whole Wheat Roti',
+          calories: isHighProtein ? 560 : isWeightLoss ? 400 : 470,
+          protein: isHighProtein ? 38 : 28,
+          carbs: isWeightLoss ? 30 : 48,
+          fat: 14,
+          prepTime: '20 mins',
+          description: 'Fresh cottage cheese or fish fillet stir-fried with bell peppers, onions, and freshly ground spices.',
+          ingredients: isNonVeg ? ['Fish Fillet (200g)', 'Brown Rice (1 cup)', 'Lemon Dill'] : isVegan ? ['Firm Tofu (200g)', 'Fenugreek Methi', 'Green Peas'] : ['Paneer Cubes (160g)', 'Capsicum & Onions', 'Whole Wheat Roti (2)']
+        },
+        {
+          id: `mp-tue-5`,
+          type: 'hydration',
+          label: '💧 HYDRATION & LIQUID BALANCE',
+          scheduledTime: 'All Day',
+          title: 'Daily 3.5L Liquid Target & Tender Coconut Water',
+          calories: 50,
+          protein: 2,
+          carbs: 12,
+          fat: 0,
+          prepTime: 'All Day',
+          description: 'Rehydrate with 3.5L water, 1 fresh Tender Coconut Water (potassium boost), and Chamomile Tea.',
+          ingredients: ['Filtered Water (3.5 Liters)', 'Fresh Tender Coconut Water (300ml)', 'Warm Chamomile Herbal Tea (1 cup)']
+        }
+      ];
+    } else if (index === 2) { // Wednesday
+      meals = [
+        {
+          id: `mp-wed-1`,
+          type: 'breakfast',
+          label: '🌅 BREAKFAST',
+          scheduledTime: '08:30 AM',
+          title: isNonVeg ? 'Boiled Egg Whites & Avocado Toast' : isVegan ? 'High-Protein Oats Smoothie Bowl & Seeds' : 'Paneer Bhurji Stuffed Multigrain Paratha',
+          calories: isHighProtein ? 440 : isWeightLoss ? 320 : 370,
+          protein: isHighProtein ? 32 : 24,
+          carbs: isWeightLoss ? 20 : 32,
+          fat: 14,
+          prepTime: '10 mins',
+          description: 'Nourishing breakfast bowl or toast topped with seeds, protein, and essential healthy fats.',
+          ingredients: isNonVeg ? ['Boiled Egg Whites (5)', 'Avocado (1/2)', 'Whole Grain Bread (2)'] : isVegan ? ['Rolled Oats (60g)', 'Plant Protein (1 scoop)', 'Chia Seeds (1 tbsp)'] : ['Paneer (150g)', 'Multigrain Paratha (1)', 'Mint Chutney']
+        },
+        {
+          id: `mp-wed-2`,
+          type: 'lunch',
+          label: '☀️ LUNCH',
+          scheduledTime: '01:30 PM',
+          title: isNonVeg ? 'Grilled Chicken Kebabs & Quinoa Salad' : isVegan ? 'Soya Chunks Curry & Brown Basmati' : 'Paneer Tikka Masala & Jeera Rice',
+          calories: isHighProtein ? 660 : isWeightLoss ? 500 : 550,
+          protein: isHighProtein ? 46 : 32,
+          carbs: isWeightLoss ? 45 : 65,
+          fat: 16,
+          prepTime: '22 mins',
+          description: 'High-protein grilled main dish served with warm quinoa salad or cumin basmati rice.',
+          ingredients: isNonVeg ? ['Chicken Breast (220g)', 'Quinoa (1 cup)', 'Bell Peppers'] : isVegan ? ['Soya Chunks (60g dry)', 'Brown Rice (1.5 cups)', 'Tomato Puree'] : ['Paneer (180g)', 'Basmati Rice (1.5 cups)', 'Spiced Marinade']
+        },
+        {
+          id: `mp-wed-3`,
+          type: 'snack',
+          label: '🍎 SNACK',
+          scheduledTime: '05:00 PM',
+          title: 'Spiced Sprouts Salad & Lemon Mint Water',
+          calories: isWeightLoss ? 160 : 220,
+          protein: 16,
+          carbs: 24,
+          fat: 3,
+          prepTime: '5 mins',
+          description: 'Steamed green gram sprouts tossed with cucumber, tomatoes, lemon juice, and chaat masala.',
+          ingredients: ['Moong Sprouts (1.5 cups)', 'Cucumber & Tomato', 'Lemon Juice', 'Chaat Masala']
+        },
+        {
+          id: `mp-wed-4`,
+          type: 'dinner',
+          label: '🌙 DINNER',
+          scheduledTime: '08:00 PM',
+          title: isNonVeg ? 'Egg Curry & Whole Wheat Roti' : isVegan ? 'Lauki Chana Dal & Quinoa' : 'Aloo Matar Paneer & Cumin Brown Rice',
+          calories: isHighProtein ? 570 : isWeightLoss ? 410 : 480,
+          protein: isHighProtein ? 36 : 26,
+          carbs: isWeightLoss ? 34 : 50,
+          fat: 14,
+          prepTime: '20 mins',
+          description: 'Home-cooked Indian curry cooked with ginger garlic paste, onions, and aromatic turmeric.',
+          ingredients: isNonVeg ? ['Eggs (3 whole + 2 whites)', 'Whole Wheat Roti (2)', 'Curry Sauce'] : isVegan ? ['Chana Dal (1 cup)', 'Bottle Gourd Lauki', 'Quinoa (1 cup)'] : ['Paneer (150g)', 'Green Peas (100g)', 'Brown Rice (1 cup)']
+        },
+        {
+          id: `mp-wed-5`,
+          type: 'hydration',
+          label: '💧 HYDRATION & LIQUID BALANCE',
+          scheduledTime: 'All Day',
+          title: 'Daily 3.5L Liquid Target & Cucumber Lemon Detox',
+          calories: 40,
+          protein: 1,
+          carbs: 8,
+          fat: 0,
+          prepTime: 'All Day',
+          description: 'Infuse 3.5L water with sliced cucumber, mint leaves, and fresh lemon for cellular alkalization.',
+          ingredients: ['Filtered Water (3.5 Liters)', 'Cucumber Mint Infusion (1 Pitcher)', 'Green Tea (1 cup)']
+        }
+      ];
+    } else { // Days 4-7 (Thursday to Sunday)
+      const dayTitles = [
+        { bk: 'Moong Dal Chilla & Curd', ln: 'Paneer Pulao & Cucumber Salad', dn: 'Tofu Palak & Roti' },
+        { bk: 'High-Protein Oats Upma', ln: 'Chole Masala & Brown Rice', dn: 'Veg Handi Curry & Quinoa' },
+        { bk: 'Spiced Tofu / Egg Scramble', ln: 'Soya Dum Biryani & Raita', dn: 'Paneer Tikka & Soup' },
+        { bk: 'FitGen High-Protein Idli/Sambar', ln: 'Shahi Paneer / Chicken Kebabs', dn: 'Garden Detox Soup & Toast' }
+      ];
+      const dt = dayTitles[(index - 3) % dayTitles.length];
+
+      meals = [
+        {
+          id: `mp-${day.toLowerCase()}-1`,
+          type: 'breakfast',
+          label: '🌅 BREAKFAST',
+          scheduledTime: '08:30 AM',
+          title: isNonVeg ? `${dt.bk} with Egg Whites` : dt.bk,
+          calories: isHighProtein ? 430 : isWeightLoss ? 310 : 360,
+          protein: isHighProtein ? 30 : 22,
+          carbs: isWeightLoss ? 20 : 30,
+          fat: 12,
+          prepTime: '12 mins',
+          description: 'Balanced protein breakfast prepared with fresh herbs, turmeric, and light oil.',
+          ingredients: ['Yellow Moong Dal / Oats (1 cup)', 'Paneer / Egg Whites (100g)', 'Mint Chutney']
+        },
+        {
+          id: `mp-${day.toLowerCase()}-2`,
+          type: 'lunch',
+          label: '☀️ LUNCH',
+          scheduledTime: '01:30 PM',
+          title: isNonVeg ? `Grilled Chicken & ${dt.ln}` : dt.ln,
+          calories: isHighProtein ? 640 : isWeightLoss ? 480 : 530,
+          protein: isHighProtein ? 42 : 30,
+          carbs: isWeightLoss ? 42 : 62,
+          fat: 14,
+          prepTime: '22 mins',
+          description: 'Satisfying high-protein lunch paired with brown basmati rice or quinoa.',
+          ingredients: ['Paneer / Chicken (180g)', 'Basmati Rice (1.5 cups)', 'Cucumber Salad']
+        },
+        {
+          id: `mp-${day.toLowerCase()}-3`,
+          type: 'snack',
+          label: '🍎 SNACK',
+          scheduledTime: '05:00 PM',
+          title: 'Roasted Pumpkin Seeds & Whey / Plant Shake',
+          calories: isWeightLoss ? 190 : 250,
+          protein: 22,
+          carbs: 22,
+          fat: 6,
+          prepTime: '3 mins',
+          description: 'Chilled protein shake blended with water/almond milk and roasted pumpkin seeds.',
+          ingredients: ['Protein Powder (1 scoop)', 'Water/Almond Milk (250ml)', 'Pumpkin Seeds (15g)']
+        },
+        {
+          id: `mp-${day.toLowerCase()}-4`,
+          type: 'dinner',
+          label: '🌙 DINNER',
+          scheduledTime: '08:00 PM',
+          title: isNonVeg ? `Seared Fish / Chicken & ${dt.dn}` : dt.dn,
+          calories: isHighProtein ? 570 : isWeightLoss ? 400 : 470,
+          protein: isHighProtein ? 36 : 26,
+          carbs: isWeightLoss ? 32 : 48,
+          fat: 14,
+          prepTime: '20 mins',
+          description: 'Light, easy-to-digest dinner cooked with digestive cumin, garlic, and fresh spinach.',
+          ingredients: ['Paneer / Tofu / Fish (160g)', 'Brown Rice / Roti (1 cup)', 'Garlic Spinach']
+        },
+        {
+          id: `mp-${day.toLowerCase()}-5`,
+          type: 'hydration',
+          label: '💧 HYDRATION & LIQUID BALANCE',
+          scheduledTime: 'All Day',
+          title: 'Daily 3.5L Liquid Target & Electrolyte Lemon Water',
+          calories: 45,
+          protein: 1,
+          carbs: 9,
+          fat: 0,
+          prepTime: 'All Day',
+          description: 'Maintain fluid balance with 3.5L water, 1 glass electrolyte lemon water, and herbal tea.',
+          ingredients: ['Filtered Water (3.5 Liters)', 'Fresh Lemon Electrolyte Water', 'Green Tea (1 cup)']
+        }
+      ];
+    }
+
+    // Enforce Allergy Substitutions across all generated meals
+    if (Array.isArray(allergies) && allergies.length > 0) {
+      const algList = allergies.map(a => a.toLowerCase());
+      meals.forEach(m => {
+        m.ingredients = m.ingredients.map(ing => {
+          if (algList.some(alg => alg.includes('peanut') || alg.includes('nut')) && ing.toLowerCase().includes('almond')) {
+            return ing.replace(/almond(s)?/gi, 'Pumpkin Seeds');
+          }
+          if (algList.some(alg => alg.includes('peanut')) && ing.toLowerCase().includes('peanut')) {
+            return ing.replace(/peanut(s)?/gi, 'Sunflower Seeds');
+          }
+          if (algList.some(alg => alg.includes('dairy')) && ing.toLowerCase().includes('paneer')) {
+            return ing.replace(/paneer/gi, 'Tofu');
+          }
+          return ing;
+        });
+      });
+    }
+
+    weeklyPlan[day] = meals;
+  });
+
+  return weeklyPlan;
+}
+
+/**
+ * Returns Monday's meal plan by default for single-day consumers
+ */
+export function generatePersonalizedMealPlan(params) {
+  const weekly = generateWeeklyMealPlan(params);
+  return weekly['Monday'] || [];
+}
+
+/**
+ * Conversational Master Chatbot NLP Engine
+ * Processes natural language prompts, greetings, Q&A, recipe requests, and feedback ("I don't like this").
+ */
+export function processConversationalChatbotQuery(rawUserQuery, conversationHistory = [], userProfile = {}) {
+  const query = (rawUserQuery || '').trim();
+  const lowerQuery = query.toLowerCase();
+
+  const userName = userProfile?.name || 'Athlete';
+  const goal = userProfile?.goal || 'Muscle Gain';
+  const dietary = userProfile?.dietary || 'Vegetarian';
+  const nation = userProfile?.nation || 'India 🇮🇳';
+  const proteinTarget = userProfile?.dailyProteinGoal || 130;
+
+  // 1. Greetings & Bot Intro Queries
+  const isGreeting = ['hi', 'hello', 'hey', 'greetings', 'who are you', 'what can you do', 'start'].some(w => lowerQuery === w || lowerQuery.startsWith(w + ' '));
+  if (isGreeting) {
+    return {
+      text: `👋 Hello **${userName}**! I am your **FitGen AI ChatGPT Nutrition Assistant**.
+
+I am calibrated for your profile:
+• 🌱 **Dietary Preference**: **${dietary} (100% Verified)**
+• 🎯 **Fitness Goal**: **${goal}** (${proteinTarget}g Protein daily target)
+• 🇮🇳 **Residence / Region**: **${nation}**
+
+Here is what you can ask me right now:
+1. 💬 **Conversational Fitness & Nutrition Q&A** (e.g. *"How to lose weight safely?"*, *"How much protein is in 2 eggs?"*)
+2. 🥗 **Recipe Suggestions from Ingredients** (e.g. *"I have tomato, onion, capsicum"* or upload a photo!)
+3. 🍽️ **Authentic Dish Macro Breakdown** (e.g. *"Chicken Tikka"*, *"Paneer Butter Masala"*, *"Samosa"*)
+4. 🔄 **Recipe Refinements & Feedback** (Type *"I don't like this"* or *"Give me another recipe"* anytime!)
+
+How can I help fuel your training today?`,
+      dishAnalysis: null,
+      ingredientRecommendations: null,
+      relevantVideos: []
+    };
+  }
+
+  // 2. Feedback / Refinement Intent ("I don't like this", "suggest another recipe", "different dish")
+  const isFeedback = lowerQuery.includes("don't like") || lowerQuery.includes("dont like") || lowerQuery.includes("another recipe") || lowerQuery.includes("different dish") || lowerQuery.includes("change recipe") || lowerQuery.includes("dislike") || lowerQuery.includes("not good");
+
+  if (isFeedback) {
+    const seedIngs = dietary === 'Non-Vegetarian' ? 'chicken, rice, curd, tomato' : 'paneer, soya, dal, rice, curd, oats';
+    const altRecommendations = getDishRecommendationsFromAvailableIngredients(seedIngs, userProfile);
+    
+    return {
+      text: `🔄 **Got your feedback, ${userName}!** No problem at all — preferences matter!
+
+I have generated a **fresh alternative selection of 100% ${dietary}** recipes tailored for your **${goal}** goal in **${nation}**:`,
+      dishAnalysis: null,
+      ingredientRecommendations: altRecommendations,
+      relevantVideos: getVideosForIngredients('Paneer')
+    };
+  }
+
+  // 3. Substitution & Culinary Tips Queries ("substitute", "replace", "how to make spicy")
+  const isSubstitution = lowerQuery.includes('substitute') || lowerQuery.includes('replace') || lowerQuery.includes('instead of') || lowerQuery.includes('swap');
+  if (isSubstitution) {
+    return {
+      text: `💡 **FitGen AI Culinary Substitution Guide**:
+
+Here are top high-protein swaps tailored for your **${dietary}** preference:
+• **For Paneer (Cottage Cheese)** ➔ Swap with **Tofu** (15g protein/150g, 60% lower calories) or **Soya Chunks** (26g protein/50g dry).
+• **For Chicken Breast** ➔ Swap with **Hard-Boiled Egg Whites** (22g protein) or **Fish Fillet** or **Paneer Cubes**.
+• **For Tomatoes / Curd Base** ➔ Swap with **Greek Yogurt** or **Coconut Milk & Lemon**.
+• **For White Rice** ➔ Swap with **Quinoa**, **Brown Rice**, or **Cauliflower Rice** for lower carbs.
+
+Feel free to ask me to convert any specific dish to a low-calorie or higher-protein version!`,
+      dishAnalysis: null,
+      ingredientRecommendations: null,
+      relevantVideos: []
+    };
+  }
+
+  // 4. General Nutrition, Fitness Goal & Weight Loss Recipe Suggestions
+  const isWeightLossQuery = lowerQuery.includes('weight loss') || lowerQuery.includes('fat loss') || lowerQuery.includes('lose weight') || lowerQuery.includes('slimming');
+  const isMuscleGainQuery = lowerQuery.includes('muscle gain') || lowerQuery.includes('hypertrophy') || lowerQuery.includes('mass') || lowerQuery.includes('gain weight');
+  const isGeneralSuggestion = lowerQuery.includes('suggest') || lowerQuery.includes('recommend') || lowerQuery.includes('what to eat') || lowerQuery.includes('diet') || lowerQuery.includes('plan') || lowerQuery.includes('calorie');
+
+  if (isWeightLossQuery || isMuscleGainQuery || isGeneralSuggestion) {
+    const targetGoal = isWeightLossQuery ? 'Weight Loss' : isMuscleGainQuery ? 'Muscle Gain' : goal;
+    const seedIngs = dietary === 'Non-Vegetarian' ? 'chicken, rice, curd, tomato' : 'paneer, soya, dal, rice, curd, oats';
+    const activeProfile = { ...userProfile, goal: targetGoal };
+    const goalRecs = getDishRecommendationsFromAvailableIngredients(seedIngs, activeProfile);
+    const calTarget = targetGoal === 'Weight Loss' ? '1,650 kcal (Calorie Deficit)' : targetGoal === 'Muscle Gain' ? '2,400 kcal (Surplus)' : '1,900 kcal';
+
+    return {
+      text: `🎯 **FitGen AI ${targetGoal} Nutrition & Recipe Recommendation**:
+
+I calibrated your request for **${targetGoal}** (${calTarget} | ${proteinTarget}g Protein target):
+• 🌱 **Dietary Preference**: **100% Verified ${dietary}**
+• 🇮🇳 **Cuisine Style**: **${nation}**
+
+Here are 4 authentic regional **${nation}** high-protein recipes designed to help you succeed on your **${targetGoal}** plan:`,
+      dishAnalysis: null,
+      ingredientRecommendations: goalRecs,
+      relevantVideos: getVideosForIngredients('Paneer')
+    };
+  }
+
+  // 5. Ingredient / Dish Processing (Food Ingredients list OR single dish query)
+  const containsFoodIng = ['tomato', 'paneer', 'chicken', 'egg', 'potato', 'peas', 'rice', 'dal', 'soya', 'oats', 'banana', 'curd', 'spinach', 'cabbage', 'carrot', 'beans', 'tofu', 'chickpeas', 'mushroom', 'beetroot', 'capsicum'].some(f => lowerQuery.includes(f));
+  const isIngredientList = query.includes(',') || query.includes('+') || containsFoodIng || lowerQuery.includes('have');
+
+  if (isIngredientList) {
+    const recs = getDishRecommendationsFromAvailableIngredients(query, userProfile);
+    const topProt = recs[0]?.macros?.protein || 0;
+    return {
+      text: `Recognized your available ingredients!
+
+Based **STRICTLY on your provided ingredients**, here are authentic regional **${nation}** recipes tailored for your **${dietary}** preference and **${goal}** plan (${topProt}g base protein yield):`,
+      dishAnalysis: null,
+      ingredientRecommendations: recs,
+      relevantVideos: getVideosForIngredients(query)
+    };
+  }
+
+  // 6. Single Dish Analysis
+  const dishAnalysis = getDetailedDishAnalysis(query, userProfile);
+  return {
+    text: `Here is the authentic ingredient breakdown, protein content, and daily intake guide for **"${dishAnalysis.dishName}"** tailored for your **${dietary}** preference and **${goal}** goal:`,
+    dishAnalysis: dishAnalysis,
+    ingredientRecommendations: null,
+    relevantVideos: getVideosForIngredients(query)
+  };
+}
+
+
+

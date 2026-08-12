@@ -149,8 +149,23 @@ export function AppProvider({ children }) {
     ];
   });
 
-  // User Profile State
-  const [userProfile, setUserProfile] = useState(DEFAULT_PROFILE);
+  // User Profile State - Persisted across page refreshes until explicit logout!
+  const [userProfile, setUserProfile] = useState(() => {
+    try {
+      const activeEmail = localStorage.getItem('fitgen_active_user') || 'alex.morgan@fitgen.ai';
+      const cleanEmail = activeEmail.trim().toLowerCase();
+      const savedProfile = localStorage.getItem(`fitgen_profile_${cleanEmail}`) || localStorage.getItem('fitgen_current_user_profile');
+      if (savedProfile) {
+        const parsed = JSON.parse(savedProfile);
+        if (parsed && typeof parsed === 'object') {
+          return { ...DEFAULT_PROFILE, ...parsed };
+        }
+      }
+    } catch (e) {
+      console.warn('Error reading saved profile on mount:', e);
+    }
+    return DEFAULT_PROFILE;
+  });
 
   // Daily Tracker Log
   const [dailyLog, setDailyLog] = useState(DEFAULT_DAILY_LOG);
@@ -212,19 +227,20 @@ export function AppProvider({ children }) {
     
     // Load profile
     try {
-      const savedProfile = localStorage.getItem(`fitgen_profile_${cleanEmail}`);
+      const savedProfile = localStorage.getItem(`fitgen_profile_${cleanEmail}`) || localStorage.getItem('fitgen_current_user_profile');
       if (savedProfile) {
         const parsed = JSON.parse(savedProfile);
         setUserProfile({ ...DEFAULT_PROFILE, ...parsed });
       } else {
         const foundUser = registeredUsers.find((u) => u.email.toLowerCase() === cleanEmail);
         if (foundUser) {
-          setUserProfile({
+          setUserProfile((prev) => ({
             ...DEFAULT_PROFILE,
-            name: foundUser.fullName || DEFAULT_PROFILE.name,
+            ...prev,
+            name: foundUser.fullName || prev.name || DEFAULT_PROFILE.name,
             email: foundUser.email,
-            goal: foundUser.goal || DEFAULT_PROFILE.goal
-          });
+            goal: foundUser.goal || prev.goal || DEFAULT_PROFILE.goal
+          }));
         }
       }
     } catch (e) {
@@ -268,12 +284,18 @@ export function AppProvider({ children }) {
     localStorage.setItem('fitgen_registered_users', JSON.stringify(registeredUsers));
   }, [registeredUsers]);
 
-  // Persist current profile to user-specific localStorage key
+  // Persist current profile to user-specific & global localStorage keys
   useEffect(() => {
-    if (isAuthenticated && currentUserEmail) {
-      localStorage.setItem(`fitgen_profile_${currentUserEmail}`, JSON.stringify(userProfile));
+    try {
+      localStorage.setItem('fitgen_current_user_profile', JSON.stringify(userProfile));
+      const emailToUse = currentUserEmail || userProfile.email;
+      if (emailToUse) {
+        localStorage.setItem(`fitgen_profile_${emailToUse.trim().toLowerCase()}`, JSON.stringify(userProfile));
+      }
+    } catch (e) {
+      console.warn('Error writing user profile to localStorage:', e);
     }
-  }, [userProfile, currentUserEmail, isAuthenticated]);
+  }, [userProfile, currentUserEmail]);
 
   // Persist daily log to user-specific localStorage key
   useEffect(() => {
@@ -406,25 +428,25 @@ export function AppProvider({ children }) {
     addToast(`Goal updated to "${newGoal}"!`, 'success');
   };
 
-  // Toast Helper
+  // Toast Helper - Max 1 toast active at a time, auto-dismiss in 2 seconds to avoid UI clutter
   const addToast = (message, type = 'success') => {
     const id = Date.now();
-    setToasts((prev) => [...prev, { id, message, type }]);
+    // Keep only the newest toast to prevent notification stacking
+    setToasts([{ id, message, type }]);
     setTimeout(() => {
       setToasts((prev) => prev.filter((t) => t.id !== id));
-    }, 4000);
+    }, 2200);
   };
 
   const removeToast = (id) => {
     setToasts((prev) => prev.filter((t) => t.id !== id));
   };
 
-  // Pantry Handlers
+  // Pantry Handlers - Silently updates active pantry without popup clutter
   const addIngredient = (ingredient) => {
     const clean = ingredient.toLowerCase().trim();
     if (clean && !userIngredients.includes(clean)) {
       setUserIngredients((prev) => [...prev, clean]);
-      addToast(`Added "${clean}" to pantry`);
     }
   };
 

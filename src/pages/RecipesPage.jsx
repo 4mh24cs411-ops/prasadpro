@@ -19,14 +19,14 @@ import {
 import IngredientVideoFinder from '../components/IngredientVideoFinder';
 
 export default function RecipesPage() {
-  const { userIngredients, savedRecipeIds, toggleSaveRecipe, addGroceryItem, addToast } = useApp();
+  const { userProfile, userIngredients, savedRecipeIds, toggleSaveRecipe, addGroceryItem, addToast } = useApp();
   const [searchParams, setSearchParams] = useSearchParams();
   const initialSearch = searchParams.get('search') || '';
 
   const [searchQuery, setSearchQuery] = useState(initialSearch);
   const [selectedCuisine, setSelectedCuisine] = useState('All'); // 'All', 'Indian', 'Western'
   const [selectedDiet, setSelectedDiet] = useState('All'); // 'All', 'Vegetarian', 'Non-Vegetarian', 'Vegan'
-  const [selectedGoal, setSelectedGoal] = useState('All'); // 'All', 'Muscle Gain', 'Weight Loss'
+  const [selectedGoal, setSelectedGoal] = useState(userProfile?.goal || 'All'); // Auto-aligned to active user profile goal!
   const [onlySaved, setOnlySaved] = useState(false);
 
   // Selected recipe for modal popup
@@ -96,7 +96,7 @@ export default function RecipesPage() {
             <Utensils className="w-7 h-7 text-emerald-400" /> AI Recipe Generator
           </h1>
           <p className="text-slate-400 text-sm mt-1">
-            Discover macro-optimized meal recipes matched to your active pantry ingredients.
+            Discover macro-optimized meal recipes matched to your active pantry ingredients & target goal ({userProfile?.goal || 'Muscle Gain'}).
           </p>
         </div>
 
@@ -160,12 +160,13 @@ export default function RecipesPage() {
             <select
               value={selectedGoal}
               onChange={(e) => setSelectedGoal(e.target.value)}
-              className="w-full px-3.5 py-2.5 bg-slate-900 border border-slate-800 rounded-xl text-sm text-slate-200 focus:outline-none focus:border-emerald-500"
+              className="w-full px-3.5 py-2.5 bg-slate-900 border border-slate-800 rounded-xl text-sm text-slate-200 focus:outline-none focus:border-emerald-500 font-semibold text-emerald-400"
             >
               <option value="All">All Fitness Goals</option>
-              <option value="Muscle Gain">Muscle Gain</option>
-              <option value="Weight Loss">Weight Loss</option>
-              <option value="Maintenance">Maintenance</option>
+              <option value="Weight Loss">🔥 Weight Loss (Fat Loss)</option>
+              <option value="Muscle Gain">💪 Muscle Gain (Hypertrophy)</option>
+              <option value="6-Pack Abs">⚡ 6-Pack Abs (Lean Cutting)</option>
+              <option value="Maintenance">✨ Maintenance & Tone</option>
             </select>
           </div>
         </div>

@@ -1,9 +1,10 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { useApp } from '../context/AppContext';
 import { analyzeImageFile, analyzeMenuCardImage } from '../services/imageRecognition';
 import RecipeDetailModal from '../components/RecipeDetailModal';
-import { getDetailedDishAnalysis, getDishRecommendationsFromAvailableIngredients } from '../utils/nutritionAiEngine';
+import { getDetailedDishAnalysis, getDishRecommendationsFromAvailableIngredients, processConversationalChatbotQuery } from '../utils/nutritionAiEngine';
+import { queryDualAiModel, getGeminiApiKey, setGeminiApiKey } from '../services/geminiAiService';
 import {
   Plus,
   Send,
@@ -30,7 +31,8 @@ import {
   Clock,
   Lock,
   Check,
-  Scan
+  Scan,
+  Calendar
 } from 'lucide-react';
 import IngredientVideoFinder from '../components/IngredientVideoFinder';
 import { getVideosForIngredients } from '../data/nutritionVideosData';
@@ -54,6 +56,7 @@ export default function IngredientScannerPage() {
     setScannerMessages 
   } = useApp();
   const navigate = useNavigate();
+  const location = useLocation();
 
   const [selectedRecipeModal, setSelectedRecipeModal] = useState(null);
   const [selectedVideoModal, setSelectedVideoModal] = useState(null);
@@ -81,10 +84,22 @@ export default function IngredientScannerPage() {
   const chatBottomRef = useRef(null);
   const recognitionRef = useRef(null);
   const [isSpeaking, setIsSpeaking] = useState(false);
+  const [showApiKeyModal, setShowApiKeyModal] = useState(false);
+  const [apiKeyInput, setApiKeyInput] = useState(() => getGeminiApiKey() || '');
 
   useEffect(() => {
     chatBottomRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages, isAnalyzing]);
+
+  // Handle search query passed via URL search params (e.g. from top Navbar search bar)
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const searchParam = params.get('search');
+    if (searchParam && searchParam.trim()) {
+      handleSendPrompt(null, searchParam.trim());
+      navigate(location.pathname, { replace: true });
+    }
+  }, [location.search]);
 
   // Helper to render markdown bold text cleanly
   const renderFormattedText = (text) => {
@@ -246,19 +261,47 @@ export default function IngredientScannerPage() {
   const attachFile = async (file) => {
     const previewUrl = URL.createObjectURL(file);
     setAttachedImage({ file, previewUrl, name: file.name });
-    addToast(`🔍 Scanning menu image: ${file.name}...`, 'info');
+    addToast(`🔍 FitGen AI Vision scanning ingredients in: ${file.name}...`, 'info');
 
-    // Perform OCR Vision Menu Dish Scan
-    const ocrRes = await analyzeMenuCardImage(file);
-    setEditingDishName(ocrRes.primaryDish);
-    setOcrConfirmModal({
-      file,
-      previewUrl,
-      fileName: file.name,
-      primaryDish: ocrRes.primaryDish,
-      candidateDishes: ocrRes.candidateDishes,
-      ocrSnippet: ocrRes.ocrExtractedText
-    });
+    setIsAnalyzing(true);
+    try {
+      const res = await analyzeImageFile(file);
+      const detectedIngs = res.detectedIngredients || ['tomato', 'paneer', 'onion', 'potato', 'peas', 'rice', 'curd'];
+
+      // Add to pantry state
+      detectedIngs.forEach((ing) => addIngredient(ing));
+      setSelectedPantryIngs(prev => Array.from(new Set([...prev, ...detectedIngs])));
+
+      const querySubject = detectedIngs.join(', ');
+      const userMsg = {
+        id: `msg-user-${Date.now()}`,
+        sender: 'user',
+        text: `Uploaded photo: "${file.name}". Identified ingredients: ${querySubject}`,
+        imagePreview: previewUrl,
+        imageName: file.name
+      };
+
+      const dishRecommendations = getDishRecommendationsFromAvailableIngredients(querySubject, userProfile);
+      const relevantVideos = getVideosForIngredients(querySubject);
+
+      const aiReply = {
+        id: `msg-ai-${Date.now()}`,
+        sender: 'ai',
+        text: `✨ **FitGen AI Computer Vision Analysis Complete**!\nIdentified **${detectedIngs.length} ingredients** in photo "${file.name}": **${detectedIngs.join(', ')}**.\nBased ONLY on these detected ingredients, here are realistic recommended fitness recipes tailored for your **${userProfile.nation || 'India 🇮🇳'}** preference and **${userProfile.goal}** target:`,
+        ingredientRecommendations: dishRecommendations,
+        relevantVideos: relevantVideos.slice(0, 2),
+        rawFile: file
+      };
+
+      setMessages((prev) => [...prev, userMsg, aiReply]);
+      addToast(`Identified ${detectedIngs.length} ingredients from photo!`, 'success');
+    } catch (err) {
+      console.error("Error analyzing image ingredients:", err);
+    } finally {
+      setIsAnalyzing(false);
+      setAttachedImage(null);
+      if (fileInputRef.current) fileInputRef.current.value = '';
+    }
   };
 
   const handleConfirmAndLockDish = (selectedDishName) => {
@@ -283,7 +326,6 @@ export default function IngredientScannerPage() {
 
     setTimeout(() => {
       try {
-        // Get detailed dish analysis specifically for the LOCKED dish name without hallucinating or changing!
         const dishAnalysis = getDetailedDishAnalysis(lockedDishName, userProfile);
         const relevantVideos = getVideosForIngredients(lockedDishName);
 
@@ -345,15 +387,6 @@ export default function IngredientScannerPage() {
 
     if (!queryToUse.trim() && !attachedImage) return;
 
-    const userMsg = {
-      id: `msg-user-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
-      sender: 'user',
-      text: queryToUse,
-      imagePreview: attachedImage ? attachedImage.previewUrl : null,
-      imageName: attachedImage ? attachedImage.name : null
-    };
-
-    setMessages((prev) => [...prev, userMsg]);
     const currentAttached = attachedImage;
     const currentText = queryToUse;
 
@@ -362,62 +395,83 @@ export default function IngredientScannerPage() {
     if (fileInputRef.current) fileInputRef.current.value = '';
     setIsAnalyzing(true);
 
-    let detectedIngs = [];
+    const userMsg = {
+      id: `msg-user-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
+      sender: 'user',
+      text: currentText,
+      imagePreview: currentAttached ? currentAttached.previewUrl : null,
+      imageName: currentAttached ? currentAttached.name : null
+    };
 
-    if (currentAttached) {
-      const res = await analyzeImageFile(currentAttached.file);
-      detectedIngs = res.detectedIngredients || [];
-      detectedIngs.forEach((ing) => addIngredient(ing));
-    }
-
-    setTimeout(() => {
-      try {
-        const querySubject = currentText.trim() || (detectedIngs.length > 0 ? detectedIngs.join(', ') : 'tomato, cabbage, onion, carrot, beans');
-        
-        // Check if input is a multi-ingredient available list
-        const isMultiIngredientQuery = querySubject.includes(',') || querySubject.includes('.') || querySubject.split(' ').length >= 3;
-        
-        let dishRecommendations = [];
-        if (isMultiIngredientQuery) {
-          dishRecommendations = getDishRecommendationsFromAvailableIngredients(querySubject, userProfile);
-        }
-
-        const dishAnalysis = getDetailedDishAnalysis(querySubject, userProfile);
-        const relevantVideos = getVideosForIngredients(querySubject);
-
-        let responseText = `Here is the authentic ingredient breakdown, protein content, and daily intake recommendation for **${dishAnalysis.dishName}** tailored for your assigned nation **${userProfile.nation || 'India'}** (${userProfile.cuisineStyle || 'High-Protein Gym'}) and **${userProfile.goal}** goal (${userProfile.dailyProteinGoal}g Protein target):`;
-
-        if (dishRecommendations.length > 0) {
-          responseText = `Recognized **${querySubject}** as available ingredients! Based ONLY on your provided ingredients, here are recommended realistic dishes ranked by ingredient match:`;
-        } else if (currentAttached) {
-          responseText = `Analyzed photo "${currentAttached.name}"! Identified dish **${dishAnalysis.dishName}**. Here is the exact ingredient protein breakdown and recommended daily intake:`;
-        }
-
-        const aiReply = {
-          id: `msg-ai-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
-          sender: 'ai',
-          text: responseText,
-          dishAnalysis: dishRecommendations.length > 0 ? null : dishAnalysis,
-          ingredientRecommendations: dishRecommendations.length > 0 ? dishRecommendations : null,
-          relevantVideos: relevantVideos.slice(0, 2)
-        };
-
-        setMessages((prev) => [...prev, aiReply]);
-      } catch (err) {
-        console.error("Error generating AI analysis:", err);
-        addToast("Analysis complete!", "info");
-      } finally {
-        setIsAnalyzing(false);
+    try {
+      let detectedIngs = [];
+      if (currentAttached) {
+        const res = await analyzeImageFile(currentAttached.file);
+        detectedIngs = res.detectedIngredients || [];
+        detectedIngs.forEach((ing) => addIngredient(ing));
       }
-    }, 750);
+
+      const lowerQuery = currentText.toLowerCase().trim();
+      let targetGoal = userProfile?.goal || 'Weight Loss';
+
+      if (lowerQuery.includes('weight loss') || lowerQuery.includes('fat loss') || lowerQuery.includes('lose weight') || lowerQuery.includes('slimming')) {
+        targetGoal = 'Weight Loss';
+      } else if (lowerQuery.includes('muscle gain') || lowerQuery.includes('hypertrophy') || lowerQuery.includes('gain weight') || lowerQuery.includes('mass')) {
+        targetGoal = 'Muscle Gain';
+      } else if (lowerQuery.includes('6-pack') || lowerQuery.includes('abs') || lowerQuery.includes('shred')) {
+        targetGoal = '6-Pack Abs';
+      } else if (lowerQuery.includes('maintenance') || lowerQuery.includes('tone') || lowerQuery.includes('maintain')) {
+        targetGoal = 'Maintenance';
+      }
+
+      const effectiveUserProfile = {
+        ...userProfile,
+        goal: targetGoal
+      };
+
+      // Dual Model Processor (Calls Google Gemini 1.5/2.0 Flash API if configured, or FitGen Turbo Local Engine)
+      const botResponse = await queryDualAiModel({
+        userPrompt: currentText,
+        attachedFile: currentAttached ? currentAttached.file : null,
+        conversationHistory: messages,
+        userProfile: effectiveUserProfile
+      });
+
+      const aiReply = {
+        id: `msg-ai-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
+        sender: 'ai',
+        text: botResponse.text,
+        sourceModel: botResponse.source,
+        dishAnalysis: botResponse.dishAnalysis,
+        ingredientRecommendations: botResponse.ingredientRecommendations,
+        relevantVideos: (botResponse.relevantVideos || []).slice(0, 2)
+      };
+
+      setMessages((prev) => [...prev, userMsg, aiReply]);
+    } catch (err) {
+      console.error("Error generating AI analysis:", err);
+    } finally {
+      setIsAnalyzing(false);
+    }
+  };
+
+  const handleSaveGeminiKey = (e) => {
+    e.preventDefault();
+    setGeminiApiKey(apiKeyInput);
+    setShowApiKeyModal(false);
+    if (apiKeyInput.trim()) {
+      addToast('🚀 Connected Google Gemini 1.5/2.0 Flash AI Model API Key!', 'success');
+    } else {
+      addToast('⚡ Switched to FitGen Turbo Local AI Model', 'info');
+    }
   };
 
   return (
     <div
+      className="flex flex-col h-[calc(100vh-4rem)] bg-[#0B1120] relative text-slate-100 overflow-hidden"
       onDragOver={handleDragOver}
       onDragLeave={handleDragLeave}
       onDrop={handleDrop}
-      className="min-h-[calc(100vh-5rem)] flex flex-col justify-between bg-[#0F172A] text-slate-100"
     >
       <input
         ref={fileInputRef}
@@ -437,7 +491,7 @@ export default function IngredientScannerPage() {
         </div>
       )}
 
-      {/* Header */}
+      {/* Top ChatGPT Navigation Header */}
       <div className="py-4 border-b border-slate-800/80 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 px-4 sm:px-6">
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 flex items-center justify-center shadow-lg shadow-emerald-500/10">
@@ -453,56 +507,121 @@ export default function IngredientScannerPage() {
           </div>
         </div>
 
-        {/* Mode Switcher Tabs */}
-        <div className="flex items-center gap-1.5 bg-slate-900/90 p-1 rounded-2xl border border-slate-800 self-stretch sm:self-auto overflow-x-auto">
+        {/* Dual AI Model Switcher & Status Badge */}
+        <div className="flex items-center gap-2">
           <button
-            onClick={() => setActiveMode('chat')}
-            className={`px-3.5 py-1.5 rounded-xl font-bold text-xs flex items-center justify-center gap-1.5 transition-all cursor-pointer whitespace-nowrap ${
-              activeMode === 'chat'
-                ? 'bg-emerald-500 text-slate-950 shadow-md'
-                : 'text-slate-400 hover:text-white'
+            onClick={() => setShowApiKeyModal(true)}
+            className={`px-3 py-1.5 rounded-xl font-bold text-xs flex items-center gap-1.5 transition-all cursor-pointer border ${
+              getGeminiApiKey()
+                ? 'bg-gradient-to-r from-purple-600/30 to-blue-600/30 text-purple-300 border-purple-500/40 shadow-sm'
+                : 'bg-slate-900 text-emerald-400 border-slate-800 hover:border-emerald-500/50'
             }`}
+            title="Configure AI Models (FitGen Turbo / Google Gemini 1.5/2.0 Flash)"
           >
-            <Bot className="w-3.5 h-3.5" />
-            <span>AI Chat Assistant</span>
+            <Sparkles className="w-3.5 h-3.5 text-purple-400" />
+            <span>{getGeminiApiKey() ? '🚀 Model: Gemini 1.5 Flash' : '⚡ Model: FitGen Turbo Local'}</span>
           </button>
 
-          <button
-            onClick={() => setActiveMode('generator')}
-            className={`px-3.5 py-1.5 rounded-xl font-bold text-xs flex items-center justify-center gap-1.5 transition-all cursor-pointer whitespace-nowrap ${
-              activeMode === 'generator'
-                ? 'bg-gradient-to-r from-emerald-500 to-teal-400 text-slate-950 shadow-md font-extrabold'
-                : 'text-slate-400 hover:text-white'
-            }`}
-          >
-            <Sparkles className="w-3.5 h-3.5 text-emerald-400" />
-            <span>⚡ AI Recipe Generator</span>
-          </button>
-
-          <button
-            onClick={() => setActiveMode('videos')}
-            className={`px-3.5 py-1.5 rounded-xl font-bold text-xs flex items-center justify-center gap-1.5 transition-all cursor-pointer whitespace-nowrap ${
-              activeMode === 'videos'
-                ? 'bg-emerald-500 text-slate-950 shadow-md'
-                : 'text-slate-400 hover:text-white'
-            }`}
-          >
-            <Video className="w-3.5 h-3.5" />
-            <span>Nutrition Videos</span>
-          </button>
-
-          {messages.length > 0 && (
+          {/* Mode Switcher Tabs */}
+          <div className="flex items-center gap-1.5 bg-slate-900/90 p-1 rounded-2xl border border-slate-800 self-stretch sm:self-auto overflow-x-auto">
             <button
-              onClick={() => setMessages([])}
-              className="px-3.5 py-1.5 rounded-xl bg-slate-800 hover:bg-rose-500/20 hover:text-rose-400 text-slate-400 border border-slate-700 font-bold text-xs flex items-center gap-1.5 transition-all cursor-pointer whitespace-nowrap"
-              title="Clear Chat History"
+              onClick={() => setActiveMode('chat')}
+              className={`px-4 py-2 rounded-xl font-extrabold text-xs flex items-center justify-center gap-2 transition-all cursor-pointer whitespace-nowrap ${
+                activeMode === 'chat'
+                  ? 'bg-gradient-to-r from-emerald-500 to-teal-400 text-slate-950 shadow-lg shadow-emerald-500/20'
+                  : 'text-slate-400 hover:text-white'
+              }`}
             >
-              <RefreshCw className="w-3.5 h-3.5" />
-              <span className="hidden sm:inline">Clear Chat</span>
+              <Bot className="w-4 h-4" />
+              <span>🤖 FitGen AI Assistant & Recipe Generator</span>
             </button>
-          )}
+
+            <button
+              onClick={() => setActiveMode('videos')}
+              className={`px-3.5 py-2 rounded-xl font-bold text-xs flex items-center justify-center gap-1.5 transition-all cursor-pointer whitespace-nowrap ${
+                activeMode === 'videos'
+                  ? 'bg-emerald-500 text-slate-950 shadow-md font-extrabold'
+                  : 'text-slate-400 hover:text-white'
+              }`}
+            >
+              <Video className="w-3.5 h-3.5" />
+              <span>Nutrition Videos</span>
+            </button>
+
+            {messages.length > 0 && (
+              <button
+                onClick={() => setMessages([])}
+                className="px-3.5 py-2 rounded-xl bg-slate-800 hover:bg-rose-500/20 hover:text-rose-400 text-slate-400 border border-slate-700 font-bold text-xs flex items-center gap-1.5 transition-all cursor-pointer whitespace-nowrap"
+                title="Clear Chat History"
+              >
+                <RefreshCw className="w-3.5 h-3.5" />
+                <span className="hidden sm:inline">Clear Chat</span>
+              </button>
+            )}
+          </div>
         </div>
       </div>
+
+      {/* Gemini AI Model Configuration Modal */}
+      {showApiKeyModal && (
+        <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-4 animate-in fade-in duration-200">
+          <div className="bg-slate-900 border border-slate-800 rounded-3xl max-w-lg w-full p-6 shadow-2xl space-y-5 relative">
+            <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+              <div className="flex items-center gap-2">
+                <div className="w-9 h-9 rounded-xl bg-purple-500/20 text-purple-400 border border-purple-500/30 flex items-center justify-center">
+                  <Sparkles className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-base font-bold text-white">Dual AI Model Architecture Settings</h3>
+                  <p className="text-xs text-slate-400">Switch between Google Gemini AI API and FitGen Turbo Local Engine</p>
+                </div>
+              </div>
+              <button onClick={() => setShowApiKeyModal(false)} className="text-slate-400 hover:text-white p-1 rounded-lg">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveGeminiKey} className="space-y-4">
+              <div className="space-y-2">
+                <label className="text-xs font-bold text-slate-300 block">
+                  Google Gemini API Key (Optional)
+                </label>
+                <input
+                  type="password"
+                  value={apiKeyInput}
+                  onChange={(e) => setApiKeyInput(e.target.value)}
+                  placeholder="AIzaSy..."
+                  className="w-full bg-slate-950 border border-slate-800 rounded-2xl px-4 py-2.5 text-sm text-slate-100 focus:outline-none focus:border-purple-500"
+                />
+                <p className="text-[11px] text-slate-400 leading-relaxed">
+                  💡 Enter your free Google Gemini API Key to enable multimodal deep vision photo recognition & open-ended general Q&A. If left empty, the app uses our fast, zero-latency **FitGen Turbo Local Engine**.
+                </p>
+              </div>
+
+              <div className="flex items-center justify-end gap-3 pt-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setApiKeyInput('');
+                    setGeminiApiKey('');
+                    setShowApiKeyModal(false);
+                    addToast('⚡ Active Model: FitGen Turbo Local Engine', 'info');
+                  }}
+                  className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold text-xs transition-all"
+                >
+                  Use FitGen Local Model
+                </button>
+                <button
+                  type="submit"
+                  className="px-5 py-2 rounded-xl bg-purple-600 hover:bg-purple-500 text-white font-bold text-xs transition-all shadow-md shadow-purple-600/30"
+                >
+                  Save Model Key
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
 
       {/* Main Content Area */}
       <div className="flex-1 overflow-y-auto py-6 max-w-4xl w-full mx-auto flex flex-col px-4">
@@ -777,22 +896,57 @@ export default function IngredientScannerPage() {
                             </div>
                           )}
 
-                          {/* Available Ingredients Used Badges */}
+                          {/* Available Ingredients Used Badges with Protein */}
                           <div className="space-y-1.5">
                             <span className="text-[11px] font-bold text-emerald-400 flex items-center gap-1">
-                              <CheckCircle2 className="w-3.5 h-3.5" /> Available Ingredients Used:
+                              <CheckCircle2 className="w-3.5 h-3.5" /> Available Ingredients Used & Protein Yield:
                             </span>
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
                               {dish.availableIngredientsUsed.map((ing, iIdx) => (
-                                <div key={iIdx} className="p-2 rounded-xl bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-between gap-2">
+                                <div key={iIdx} className="p-2.5 rounded-xl bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-between gap-2">
                                   <div className="flex items-center gap-2 min-w-0">
-                                    <span className="text-sm">{ing.icon}</span>
-                                    <span className="text-xs font-bold text-white truncate">{ing.name}</span>
+                                    <span className="text-base shrink-0">{ing.icon}</span>
+                                    <div className="min-w-0">
+                                      <span className="text-xs font-bold text-white truncate block">{ing.name}</span>
+                                      <span className="text-[10px] text-slate-400">{ing.amount}</span>
+                                    </div>
                                   </div>
-                                  <span className="text-[10px] text-emerald-400 font-semibold shrink-0">{ing.amount}</span>
+                                  <span className="text-xs font-black text-emerald-400 bg-emerald-500/20 px-2 py-0.5 rounded-lg border border-emerald-500/30 shrink-0">
+                                    ⚡ {ing.protein ?? 0}g Protein
+                                  </span>
                                 </div>
                               ))}
                             </div>
+                          </div>
+
+                          {/* Recipe Protein Content Breakdown & High-Protein Booster */}
+                          <div className="p-3.5 rounded-2xl bg-gradient-to-r from-emerald-950/60 via-slate-900 to-teal-950/60 border border-emerald-500/40 space-y-2.5">
+                            <div className="flex items-center justify-between">
+                              <span className="text-xs font-extrabold text-white flex items-center gap-1.5 font-heading">
+                                <Dumbbell className="w-4 h-4 text-emerald-400" />
+                                Recipe Protein Content Breakdown
+                              </span>
+                              <span className="px-2.5 py-0.5 rounded-full bg-emerald-500 text-slate-950 text-[11px] font-black shadow-md">
+                                Total: {dish.macros.protein}g Protein
+                              </span>
+                            </div>
+
+                            <div className="flex flex-wrap gap-1.5">
+                              {dish.availableIngredientsUsed.map((ing, pIdx) => (
+                                <span key={pIdx} className="px-2.5 py-1 rounded-xl bg-slate-950/80 border border-slate-800 text-[11px] font-bold text-slate-200 flex items-center gap-1">
+                                  <span>{ing.icon}</span>
+                                  <span>{ing.name}:</span>
+                                  <span className="text-emerald-400 font-extrabold">{ing.protein ?? 0}g protein</span>
+                                </span>
+                              ))}
+                            </div>
+
+                            {dish.highProteinBooster && (
+                              <div className="text-[11px] text-emerald-300 font-semibold pt-1 border-t border-slate-800/80 flex items-start gap-1.5">
+                                <Sparkles className="w-3.5 h-3.5 text-emerald-400 shrink-0 mt-0.5" />
+                                <span>{dish.highProteinBooster}</span>
+                              </div>
+                            )}
                           </div>
 
                           {/* Optional Additional Pantry Staples */}
@@ -1054,6 +1208,37 @@ export default function IngredientScannerPage() {
                     </div>
                   </div>
                 )}
+
+                {/* Interactive Chatbot Options Bar for Chatbot Refinement */}
+                {msg.sender === 'ai' && (
+                  <div className="pt-2 flex flex-wrap items-center gap-2">
+                    <span className="text-[11px] font-bold text-slate-400 flex items-center gap-1">
+                      <Sparkles className="w-3.5 h-3.5 text-emerald-400" /> Interactive Chatbot Options:
+                    </span>
+
+                    <button
+                      onClick={() => handleSendPrompt(null, `I don't like this recipe. Please suggest a completely different alternative recipe for my ${userProfile.dietary || 'Vegetarian'} preference and ${userProfile.goal || 'Weight Loss'} goal.`)}
+                      className="px-3 py-1.5 rounded-xl bg-slate-900 hover:bg-slate-800 border border-slate-700 text-slate-200 hover:text-white text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer shadow-sm active:scale-95"
+                    >
+                      <RefreshCw className="w-3.5 h-3.5 text-emerald-400" />
+                      <span>🔄 Suggest Alternative Recipe</span>
+                    </button>
+
+                    <button
+                      onClick={() => handleSendPrompt(null, `What ingredients can I substitute or replace in this dish for lower calories and higher protein?`)}
+                      className="px-3 py-1.5 rounded-xl bg-slate-900 hover:bg-slate-800 border border-slate-700 text-slate-200 hover:text-white text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer shadow-sm active:scale-95"
+                    >
+                      💬 <span>Ask Chatbot for Substitutes & Cooking Tips</span>
+                    </button>
+
+                    <button
+                      onClick={() => handleSendPrompt(null, `Suggest a 100% ${userProfile.dietary || 'Vegetarian'} high-protein recipe for ${userProfile.goal || 'Weight Loss'}.`)}
+                      className="px-3 py-1.5 rounded-xl bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/30 text-emerald-300 text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer shadow-sm active:scale-95"
+                    >
+                      🌱 <span>Suggest 100% {userProfile.dietary || 'Vegetarian'} Dish</span>
+                    </button>
+                  </div>
+                )}
               </div>
 
               {msg.sender === 'user' && (
@@ -1091,6 +1276,39 @@ export default function IngredientScannerPage() {
               </button>
             </div>
           )}
+
+          {/* Multi-Ingredient Quick Selection Pills Bar */}
+          <div className="flex items-center gap-1.5 overflow-x-auto pb-1.5 no-scrollbar">
+            <span className="text-[11px] font-extrabold text-slate-400 shrink-0 flex items-center gap-1">
+              <Sparkles className="w-3 h-3 text-emerald-400" /> Tap Multiple Ingredients:
+            </span>
+            {['tomato', 'cabbage', 'onion', 'carrot', 'beans', 'beetroot', 'capsicum', 'paneer', 'spinach', 'potato', 'peas', 'egg', 'chicken', 'rice', 'dal', 'tofu'].map((ing) => {
+              const isAlreadyInPrompt = promptText.toLowerCase().includes(ing);
+              return (
+                <button
+                  key={ing}
+                  type="button"
+                  onClick={() => {
+                    if (isAlreadyInPrompt) return;
+                    setPromptText((prev) => {
+                      const trimmed = prev.trim();
+                      if (!trimmed) return ing;
+                      if (trimmed.endsWith(',')) return `${trimmed} ${ing}`;
+                      return `${trimmed}, ${ing}`;
+                    });
+                  }}
+                  className={`px-2.5 py-1 rounded-xl text-xs font-bold transition-all flex items-center gap-1 shrink-0 cursor-pointer border ${
+                    isAlreadyInPrompt
+                      ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/40 shadow-sm'
+                      : 'bg-slate-900 hover:bg-slate-800 text-slate-300 border-slate-800 hover:border-emerald-500/50'
+                  }`}
+                >
+                  <span>{isAlreadyInPrompt ? '✓' : '+'}</span>
+                  <span className="capitalize">{ing}</span>
+                </button>
+              );
+            })}
+          </div>
 
           <form onSubmit={(e) => handleSendPrompt(e)} className="relative flex items-center bg-slate-900 border border-slate-800 focus-within:border-emerald-500/60 rounded-3xl p-1.5 pl-3.5 shadow-2xl transition-all">
             <button
