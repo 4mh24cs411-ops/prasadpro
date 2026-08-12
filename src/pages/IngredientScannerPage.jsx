@@ -403,6 +403,9 @@ export default function IngredientScannerPage() {
       imageName: currentAttached ? currentAttached.name : null
     };
 
+    // Instantly append user message to chat UI for zero-perceived-latency response
+    setMessages((prev) => [...prev, userMsg]);
+
     try {
       let detectedIngs = [];
       if (currentAttached) {
@@ -447,9 +450,19 @@ export default function IngredientScannerPage() {
         relevantVideos: (botResponse.relevantVideos || []).slice(0, 2)
       };
 
-      setMessages((prev) => [...prev, userMsg, aiReply]);
+      setMessages((prev) => [...prev, aiReply]);
     } catch (err) {
       console.error("Error generating AI analysis:", err);
+      const fallbackBotRes = processConversationalChatbotQuery(currentText, messages, userProfile);
+      const errReply = {
+        id: `msg-ai-${Date.now()}`,
+        sender: 'ai',
+        text: fallbackBotRes.text,
+        dishAnalysis: fallbackBotRes.dishAnalysis,
+        ingredientRecommendations: fallbackBotRes.ingredientRecommendations,
+        relevantVideos: (fallbackBotRes.relevantVideos || []).slice(0, 2)
+      };
+      setMessages((prev) => [...prev, errReply]);
     } finally {
       setIsAnalyzing(false);
     }
