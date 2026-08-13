@@ -374,7 +374,7 @@ export function getUniqueFoodImage(dishName = '', ingredientsStr = '') {
 export function getVideosForIngredients(inputQuery) {
   try {
     if (!inputQuery || typeof inputQuery !== 'string' || !inputQuery.trim()) {
-      return (CURATED_NUTRITION_VIDEOS || []).slice(0, 2);
+      return (CURATED_NUTRITION_VIDEOS || []).slice(0, 4);
     }
 
     const queryClean = inputQuery.toLowerCase().trim();
@@ -394,23 +394,30 @@ export function getVideosForIngredients(inputQuery) {
       );
     });
 
-    // Return strictly matched videos if available
-    if (matched.length >= 2) {
-      return matched.slice(0, 2);
+    // Return 3-4 videos for rich multi-video experience!
+    if (matched.length >= 3) {
+      return matched.slice(0, 4);
+    }
+
+    if (matched.length === 2) {
+      const dynamicCard = createDynamicIngredientVideoCard(inputQuery, 3);
+      return [...matched, dynamicCard];
     }
 
     if (matched.length === 1) {
-      const dynamicCard = createDynamicIngredientVideoCard(inputQuery, 2);
-      return [matched[0], dynamicCard];
+      const dynamicCard1 = createDynamicIngredientVideoCard(inputQuery, 2);
+      const dynamicCard2 = createDynamicIngredientVideoCard(inputQuery, 3);
+      return [matched[0], dynamicCard1, dynamicCard2];
     }
 
-    // Create 2 100% relevant dynamic video cards tailored for the exact query!
+    // Create 3 100% relevant dynamic video cards tailored for the exact query!
     const card1 = createDynamicIngredientVideoCard(inputQuery, 1);
     const card2 = createDynamicIngredientVideoCard(inputQuery, 2);
-    return [card1, card2];
+    const card3 = createDynamicIngredientVideoCard(inputQuery, 3);
+    return [card1, card2, card3];
   } catch (err) {
     console.warn("getVideosForIngredients safe fallback:", err);
-    return (CURATED_NUTRITION_VIDEOS || []).slice(0, 2);
+    return (CURATED_NUTRITION_VIDEOS || []).slice(0, 4);
   }
 }
 
@@ -437,6 +444,14 @@ function createDynamicIngredientVideoCard(ingredientsText, variant = 1) {
       `Glycemic index rating & bioavailable protein breakdown`,
       `Optimal meal timing & digestive synergy`
     ];
+  } else if (variant === 3) {
+    titleText = `Quick 10-Minute ${queryCap} Meal Prep & Tips`;
+    summaryText = `Fast meal prep tutorial on cooking ${queryCap} for busy schedules and post-workout recovery.`;
+    highlights = [
+      `10-Minute quick prep technique for ${queryCap}`,
+      `Meal prep batch storage & reheating guidance`,
+      `Electrolyte & hydration balance`
+    ];
   }
 
   const searchEnc = encodeURIComponent(`${ingredientsText} authentic recipe nutrition macros`);
@@ -450,7 +465,7 @@ function createDynamicIngredientVideoCard(ingredientsText, variant = 1) {
     youtubeUrl: `https://www.youtube.com/results?search_query=${searchEnc}`,
     embedUrl: null,
     mp4Fallback: MP4_COOKING_CLIPS.curry,
-    duration: variant === 1 ? "10:15" : "08:45",
+    duration: variant === 1 ? "10:15" : variant === 2 ? "08:45" : "06:30",
     views: "Curated Masterclass",
     isDynamic: true,
     thumbnail: uniqueImg,

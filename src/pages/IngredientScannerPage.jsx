@@ -491,12 +491,12 @@ export default function IngredientScannerPage() {
 
       try {
         if (botResponse?.relevantVideos && Array.isArray(botResponse.relevantVideos) && botResponse.relevantVideos.length > 0) {
-          finalVideos = botResponse.relevantVideos.slice(0, 3);
+          finalVideos = botResponse.relevantVideos.slice(0, 4);
         } else {
-          finalVideos = (getVideosForIngredients(currentText) || []).slice(0, 3);
+          finalVideos = (getVideosForIngredients(currentText) || []).slice(0, 4);
         }
       } catch (vErr) {
-        finalVideos = (getVideosForIngredients('vegetables') || []).slice(0, 3);
+        finalVideos = (getVideosForIngredients('vegetables') || []).slice(0, 4);
       }
 
       const responseText = botResponse?.text && botResponse.text.trim()
