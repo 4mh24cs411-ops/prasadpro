@@ -749,147 +749,114 @@ export function getDishRecommendationsFromAvailableIngredients(rawIngredientsTex
   const hasChicken = primaryKeys.some(k => k.includes('chicken'));
   const hasEgg = primaryKeys.some(k => k.includes('egg'));
 
-  const topIngsStr = primaryItemNames.slice(0, 3).join(', ');
+  const userTypedWords = userMatchedItems.map(i => i.userText ? i.userText.charAt(0).toUpperCase() + i.userText.slice(1) : i.name.split(' ')[0]);
+  const ingSummaryStr = userTypedWords.slice(0, 4).join(', ');
   const allIngsStr = primaryItemNames.join(', ');
-
-  // Goal prefix tag
-  const goalTag = goal === 'Weight Loss' ? '🔥 Fat-Loss Version:' : goal === 'Muscle Gain' ? '💪 Mass-Gainer Version:' : goal === '6-Pack Abs' ? '⚡ 6-Pack Abs Shredder:' : '✨ Balanced Energy:';
 
   const recommendations = [];
 
-  // Regional Cuisine Generator based on user residence/belonged region (userProfile.nation)
-  if (nation.includes('India')) {
-    // Authentic Regional Indian Dishes
-    recommendations.push({
-      id: `rec-dish-1-${Date.now()}-1`,
-      dishName: `${goalTag} South Indian Style ${topIngsStr} Poriyal / Sabzi`,
-      cuisine: 'South Indian Regional',
-      dietary: (hasChicken && userDietary === 'Non-Vegetarian') ? 'Non-Vegetarian' : (hasEgg && userDietary === 'Eggetarian') ? 'Eggetarian' : 'Vegetarian',
-      image: 'https://images.unsplash.com/photo-1540420773420-3366772f4999?auto=format&fit=crop&w=800&q=80',
-      matchScore: { usedCount: userMatchedItems.length, totalAvailable: uniqueTokens.length, percentage: 100 },
-      availableIngredientsUsed: userMatchedItems,
-      optionalIngredients: [
-        { name: 'Mustard Seeds & Curry Leaves', icon: '🌿', amount: '1 tsp', note: 'Tempering' },
-        { name: 'Himalayan Pink Salt', icon: '🧂', amount: '1 pinch', note: 'Seasoning' }
-      ],
-      prepTime: '8 mins',
-      cookTime: '10 mins',
-      servingSize: '1 bowl (300g)',
-      macros: { calories: totalBaseCal + 50, protein: totalBaseProt, carbs: 24, fat: 5, fiber: 7.5 },
-      highProteinBooster: `💪 Regional Desi Style: Tempered with mustard seeds & curry leaves tailored for ${nation}!`,
-      fitnessGoalReason: `Authentic regional Indian stir-fry preserving micronutrients for your ${goal} plan.`,
-      fitgenGoalVersion: `Goal tuned for ${goal} (${nation} Region)`,
-      instructions: [
-        { step: 1, title: 'Clean & Chop', description: `Chop ${allIngsStr}.`, timerSeconds: 240 },
-        { step: 2, title: 'Temper Spices', description: 'Heat 1 tsp oil. Add mustard seeds, curry leaves, and green chilis.', timerSeconds: 180 },
-        { step: 3, title: 'Steam Sabzi', description: `Add ${allIngsStr}, cover and steam for 8 mins.`, timerSeconds: 480 }
-      ]
-    });
+  // Authentic Regional Indian & Global Dishes (STRICTLY using user's typed ingredients)
+  recommendations.push({
+    id: `rec-dish-1-${Date.now()}-1`,
+    dishName: `🍲 Sautéed ${ingSummaryStr} Stir-Fry / Sabzi`,
+    cuisine: 'Desi Fitness Stir-Fry',
+    dietary: (hasChicken && userDietary === 'Non-Vegetarian') ? 'Non-Vegetarian' : (hasEgg && userDietary === 'Eggetarian') ? 'Eggetarian' : 'Vegetarian',
+    image: getUniqueFoodImage(ingSummaryStr, rawIngredientsText),
+    matchScore: { usedCount: userMatchedItems.length, totalAvailable: uniqueTokens.length, percentage: 100 },
+    availableIngredientsUsed: userMatchedItems,
+    optionalIngredients: [
+      { name: 'Cold-Pressed Cooking Oil / Ghee', icon: '🫒', amount: '1 tsp', note: 'Cooking Medium' },
+      { name: 'Himalayan Pink Salt & Black Pepper', icon: '🧂', amount: '1 pinch', note: 'Seasoning' }
+    ],
+    prepTime: '8 mins',
+    cookTime: '10 mins',
+    servingSize: '1 bowl (300g)',
+    macros: { calories: totalBaseCal + 40, protein: totalBaseProt, carbs: 24, fat: 5, fiber: 7.5 },
+    highProteinBooster: `💪 100% Strict Match: Made exclusively from your ${ingSummaryStr}!`,
+    fitnessGoalReason: `Preserves thermal vitamins and fiber for your ${goal} plan.`,
+    fitgenGoalVersion: `Goal tuned for ${goal}`,
+    instructions: [
+      { step: 1, title: 'Clean & Chop', description: `Clean and chop ${allIngsStr}.`, timerSeconds: 240 },
+      { step: 2, title: 'Temper Spices', description: 'Heat 1 tsp oil in skillet. Add cumin seeds and chilis.', timerSeconds: 180 },
+      { step: 3, title: 'Sauté & Steam', description: `Add ${allIngsStr}, cover and cook on medium-low for 8 mins.`, timerSeconds: 480 }
+    ]
+  });
 
-    recommendations.push({
-      id: `rec-dish-2-${Date.now()}-2`,
-      dishName: `${goalTag} North Indian Kadai ${topIngsStr} Bistro Masala`,
-      cuisine: 'North Indian Bistro',
-      dietary: (hasChicken && userDietary === 'Non-Vegetarian') ? 'Non-Vegetarian' : 'Vegetarian',
-      image: 'https://images.unsplash.com/photo-1631452180519-c014fe946bc7?auto=format&fit=crop&w=800&q=80',
-      matchScore: { usedCount: userMatchedItems.length, totalAvailable: uniqueTokens.length, percentage: 100 },
-      availableIngredientsUsed: userMatchedItems,
-      optionalIngredients: [
-        { name: 'Kadai Masala & Ginger', icon: '🧄', amount: '1 tsp', note: 'Aromatics' },
-        { name: 'Fresh Cilantro', icon: '🌿', amount: '2 tbsp', note: 'Garnish' }
-      ],
-      prepTime: '10 mins',
-      cookTime: '12 mins',
-      servingSize: '1.5 cups (310g)',
-      macros: { calories: totalBaseCal + 60, protein: totalBaseProt, carbs: 26, fat: 6, fiber: 7.0 },
-      highProteinBooster: `💪 Rich Gravy: Slow-simmered kadai spices matching ${nation} home cooking!`,
-      fitnessGoalReason: `Anti-inflammatory spices support metabolic health (${goal}).`,
-      fitgenGoalVersion: `Goal tuned for ${goal} (${nation} Region)`,
-      instructions: [
-        { step: 1, title: 'Sauté Kadai Base', description: 'Sauté ginger, garlic, and onions until translucent.', timerSeconds: 240 },
-        { step: 2, title: 'Simmer Veggies', description: `Fold in ${allIngsStr} with garam masala. Simmer 8 mins.`, timerSeconds: 480 },
-        { step: 3, title: 'Garnish', description: 'Garnish with cilantro and serve warm!', timerSeconds: 60 }
-      ]
-    });
+  recommendations.push({
+    id: `rec-dish-2-${Date.now()}-2`,
+    dishName: `🥘 Desi Spiced ${ingSummaryStr} Curry / Masala`,
+    cuisine: 'Indian Masala Curry',
+    dietary: (hasChicken && userDietary === 'Non-Vegetarian') ? 'Non-Vegetarian' : 'Vegetarian',
+    image: 'https://images.unsplash.com/photo-1631452180519-c014fe946bc7?auto=format&fit=crop&w=800&q=80',
+    matchScore: { usedCount: userMatchedItems.length, totalAvailable: uniqueTokens.length, percentage: 100 },
+    availableIngredientsUsed: userMatchedItems,
+    optionalIngredients: [
+      { name: 'Garam Masala & Turmeric', icon: '🌶️', amount: '1/2 tsp', note: 'Spices' },
+      { name: 'Fresh Cilantro', icon: '🌿', amount: '2 tbsp', note: 'Garnish' }
+    ],
+    prepTime: '10 mins',
+    cookTime: '12 mins',
+    servingSize: '1.5 cups (310g)',
+    macros: { calories: totalBaseCal + 50, protein: totalBaseProt, carbs: 26, fat: 6, fiber: 7.0 },
+    highProteinBooster: `💪 Rich Flavor: Simmered curry using strictly your ${ingSummaryStr}!`,
+    fitnessGoalReason: `Anti-inflammatory turmeric and cumin support active digestion (${goal}).`,
+    fitgenGoalVersion: `Goal tuned for ${goal}`,
+    instructions: [
+      { step: 1, title: 'Prepare Gravy Base', description: 'Sauté onions and tomatoes until soft and fragrant.', timerSeconds: 240 },
+      { step: 2, title: 'Simmer Veggies', description: `Add ${allIngsStr} with spices and 1/2 cup water. Simmer 8 mins.`, timerSeconds: 480 },
+      { step: 3, title: 'Garnish & Serve', description: 'Top with fresh cilantro and serve warm!', timerSeconds: 60 }
+    ]
+  });
 
-    recommendations.push({
-      id: `rec-dish-3-${Date.now()}-3`,
-      dishName: `${goalTag} Pan-Seared ${topIngsStr} Desi Protein Tikki`,
-      cuisine: 'Desi Fitness',
-      dietary: 'Vegetarian',
-      image: 'https://images.unsplash.com/photo-1525351484163-7529414344d8?auto=format&fit=crop&w=800&q=80',
-      matchScore: { usedCount: userMatchedItems.length, totalAvailable: uniqueTokens.length, percentage: 95 },
-      availableIngredientsUsed: userMatchedItems,
-      optionalIngredients: [
-        { name: 'Oats / Gram Flour', icon: '🌾', amount: '2 tbsp', note: 'Binder' },
-        { name: 'Green Chilis', icon: '🌶️', amount: '1 small', note: 'Spice' }
-      ],
-      prepTime: '8 mins',
-      cookTime: '8 mins',
-      servingSize: '2 large tikkis (250g)',
-      macros: { calories: totalBaseCal + 70, protein: totalBaseProt + 4, carbs: 28, fat: 5, fiber: 6.5 },
-      highProteinBooster: `💪 Crunchy Snack: Shredded ${topIngsStr} pan-seared into savory tikkis!`,
-      fitnessGoalReason: `High fiber content promotes satiety and fat loss (${goal}).`,
-      fitgenGoalVersion: `Goal tuned for ${goal} (${nation} Region)`,
-      instructions: [
-        { step: 1, title: 'Grate Veggies', description: `Finely grate ${allIngsStr}.`, timerSeconds: 240 },
-        { step: 2, title: 'Shape & Pan-Sear', description: 'Shape patties and pan-sear on tawa with 1/2 tsp oil until crisp.', timerSeconds: 360 },
-        { step: 3, title: 'Serve', description: 'Serve hot with mint chutney!', timerSeconds: 60 }
-      ]
-    });
+  recommendations.push({
+    id: `rec-dish-3-${Date.now()}-3`,
+    dishName: `🥗 Fresh ${ingSummaryStr} Micronutrient Protein Salad Bowl`,
+    cuisine: 'Garden Fresh Fitness',
+    dietary: 'Vegetarian',
+    image: 'https://images.unsplash.com/photo-1512621776951-a57141f2eefd?auto=format&fit=crop&w=800&q=80',
+    matchScore: { usedCount: userMatchedItems.length, totalAvailable: uniqueTokens.length, percentage: 100 },
+    availableIngredientsUsed: userMatchedItems,
+    optionalIngredients: [
+      { name: 'Lemon Juice & Black Pepper', icon: '🍋', amount: '1 tbsp', note: 'Dressing' },
+      { name: 'Roasted Cumin Powder', icon: '🧂', amount: '1/2 tsp', note: 'Seasoning' }
+    ],
+    prepTime: '6 mins',
+    cookTime: '0 mins',
+    servingSize: '1 large salad bowl (280g)',
+    macros: { calories: totalBaseCal, protein: totalBaseProt, carbs: 22, fat: 2, fiber: 8.0 },
+    highProteinBooster: `💪 Raw Crunchy Bowl: Uncooked crisp ${ingSummaryStr} retaining 100% enzymes!`,
+    fitnessGoalReason: `Ultra-high satiety and zero cooking oil ideal for ${goal}.`,
+    fitgenGoalVersion: `Goal tuned for ${goal}`,
+    instructions: [
+      { step: 1, title: 'Shred & Slice', description: `Finely shred and dice ${allIngsStr}.`, timerSeconds: 300 },
+      { step: 2, title: 'Dress & Toss', description: 'Toss with lemon juice, pink salt, and black pepper. Serve fresh!', timerSeconds: 60 }
+    ]
+  });
 
-    recommendations.push({
-      id: `rec-dish-4-${Date.now()}-4`,
-      dishName: `${goalTag} Traditional Desi ${topIngsStr} Shorba Soup`,
-      cuisine: 'Desi Wellness',
-      dietary: 'Vegan',
-      image: 'https://images.unsplash.com/photo-1547592166-23ac45744acd?auto=format&fit=crop&w=800&q=80',
-      matchScore: { usedCount: userMatchedItems.length, totalAvailable: uniqueTokens.length, percentage: 100 },
-      availableIngredientsUsed: userMatchedItems,
-      optionalIngredients: [
-        { name: 'Roasted Cumin & Black Pepper', icon: '🧂', amount: '1/2 tsp', note: 'Digestion' },
-        { name: 'Lemon Juice', icon: '🍋', amount: '1 tbsp', note: 'Finish' }
-      ],
-      prepTime: '5 mins',
-      cookTime: '10 mins',
-      servingSize: '2 bowls (360g)',
-      macros: { calories: Math.max(70, totalBaseCal - 20), protein: totalBaseProt, carbs: 16, fat: 2, fiber: 7.0 },
-      highProteinBooster: `💪 Detox Broth: Warm nourishing shorba made strictly from your ingredients!`,
-      fitnessGoalReason: `Flushes excess water weight and aids digestive recovery (${goal}).`,
-      fitgenGoalVersion: `Goal tuned for ${goal} (${nation} Region)`,
-      instructions: [
-        { step: 1, title: 'Boil Veggies', description: `Boil ${allIngsStr} in 2.5 cups water with cumin and pink salt.`, timerSeconds: 480 },
-        { step: 2, title: 'Simmer & Strain', description: 'Simmer on low heat, squeeze lemon juice, and serve warm.', timerSeconds: 180 }
-      ]
-    });
-  } else {
-    // Western / Global Regional Dishes
-    recommendations.push({
-      id: `rec-dish-1-${Date.now()}-1`,
-      dishName: `${goalTag} Pan-Seared Roasted ${topIngsStr} Harvest Skillet`,
-      cuisine: 'Western Fitness',
-      dietary: 'Vegetarian',
-      image: 'https://images.unsplash.com/photo-1540420773420-3366772f4999?auto=format&fit=crop&w=800&q=80',
-      matchScore: { usedCount: userMatchedItems.length, totalAvailable: uniqueTokens.length, percentage: 100 },
-      availableIngredientsUsed: userMatchedItems,
-      optionalIngredients: [
-        { name: 'Olive Oil & Herbs', icon: '🫒', amount: '1 tsp', note: 'Drizzle' },
-        { name: 'Sea Salt & Black Pepper', icon: '🧂', amount: '1 pinch', note: 'Seasoning' }
-      ],
-      prepTime: '5 mins',
-      cookTime: '10 mins',
-      servingSize: '1 bowl (280g)',
-      macros: { calories: totalBaseCal + 50, protein: totalBaseProt, carbs: 22, fat: 4, fiber: 7.0 },
-      highProteinBooster: `💪 Global Harvest: Roasted skillet tailored for ${nation}!`,
-      fitnessGoalReason: `Clean eating option supporting lean muscle development (${goal}).`,
-      fitgenGoalVersion: `Goal tuned for ${goal} (${nation} Region)`,
-      instructions: [
-        { step: 1, title: 'Prep', description: `Slice ${allIngsStr}.`, timerSeconds: 180 },
-        { step: 2, title: 'Roast Skillet', description: `Roast ${allIngsStr} in pan with olive oil and black pepper for 10 mins.`, timerSeconds: 600 }
-      ]
-    });
-  }
-
+  recommendations.push({
+    id: `rec-dish-4-${Date.now()}-4`,
+    dishName: `🍵 Warm ${ingSummaryStr} Detox Shorba / Soup`,
+    cuisine: 'Desi Wellness Soup',
+    dietary: 'Vegan',
+    image: 'https://images.unsplash.com/photo-1547592166-23ac45744acd?auto=format&fit=crop&w=800&q=80',
+    matchScore: { usedCount: userMatchedItems.length, totalAvailable: uniqueTokens.length, percentage: 100 },
+    availableIngredientsUsed: userMatchedItems,
+    optionalIngredients: [
+      { name: 'Roasted Cumin & Black Pepper', icon: '🧂', amount: '1/2 tsp', note: 'Digestion' },
+      { name: 'Lemon Juice', icon: '🍋', amount: '1 tbsp', note: 'Finish' }
+    ],
+    prepTime: '5 mins',
+    cookTime: '10 mins',
+    servingSize: '2 bowls (360g)',
+    macros: { calories: Math.max(60, totalBaseCal - 15), protein: totalBaseProt, carbs: 16, fat: 1, fiber: 7.0 },
+    highProteinBooster: `💪 Hydrating Detox: Warm soup extracted exclusively from your ${ingSummaryStr}!`,
+    fitnessGoalReason: `Hydrating low-calorie broth that flushes water weight for ${goal}.`,
+    fitgenGoalVersion: `Goal tuned for ${goal}`,
+    instructions: [
+      { step: 1, title: 'Boil Ingredients', description: `Boil ${allIngsStr} in 2.5 cups water with cumin and salt.`, timerSeconds: 480 },
+      { step: 2, title: 'Simmer & Serve', description: 'Simmer for 5 mins, squeeze lemon juice, and serve warm.', timerSeconds: 180 }
+    ]
+  });
   // Filter out any dishes that contain user's active allergies
   if (allergies.length > 0) {
     recommendations.forEach(dish => {
@@ -903,7 +870,7 @@ export function getDishRecommendationsFromAvailableIngredients(rawIngredientsTex
     });
   }
 
-  // Dynamically transform every recommendation specifically for the user's active fitness goal (Weight Loss, Muscle Gain, 6-Pack Abs, Maintenance)
+  // Dynamically transform every recommendation specifically for the user's active fitness goal
   const adaptedRecommendations = recommendations.map((dish) => {
     let goalDishName = dish.dishName;
     let macros = { ...dish.macros };
@@ -911,7 +878,6 @@ export function getDishRecommendationsFromAvailableIngredients(rawIngredientsTex
     let goalVersion = dish.fitgenGoalVersion;
 
     if (goal === 'Weight Loss') {
-      goalDishName = `🔥 Fat-Loss Version: ${dish.dishName.replace(/FitGen|Authentic|High-Protein|Desi/g, '').trim()}`;
       macros = {
         calories: Math.round(dish.macros.calories * 0.68),
         protein: Math.round(dish.macros.protein * 1.1),
@@ -922,7 +888,6 @@ export function getDishRecommendationsFromAvailableIngredients(rawIngredientsTex
       fitnessReason = `🔥 Calorie-Deficit Fat-Loss Volume Meal: High fiber & ${macros.protein}g protein under ${macros.calories} kcal keeps you full for 4+ hours while accelerating body fat burning.`;
       goalVersion = `🔥 FitGen Fat-Loss Modification: Air-cooked with minimal oil (zero ghee), doubled green leafies, and zero simple carbs to maximize fat shred.`;
     } else if (goal === 'Muscle Gain') {
-      goalDishName = `💪 Mass-Gainer Version: ${dish.dishName.replace(/FitGen|Authentic|High-Protein|Desi/g, '').trim()}`;
       macros = {
         calories: Math.round(dish.macros.calories * 1.35),
         protein: Math.round(dish.macros.protein * 1.3),
@@ -933,7 +898,6 @@ export function getDishRecommendationsFromAvailableIngredients(rawIngredientsTex
       fitnessReason = `💪 Calorie-Surplus Mass Builder: Delivers ${macros.protein}g protein and complex carbs to fuel intense training and spike hypertrophy.`;
       goalVersion = `💪 FitGen Muscle Gain Modification: Extra 50g protein portion + basmati/quinoa base for maximum muscle growth.`;
     } else if (goal === '6-Pack Abs') {
-      goalDishName = `⚡ 6-Pack Abs Shredder: ${dish.dishName.replace(/FitGen|Authentic|High-Protein|Desi/g, '').trim()}`;
       macros = {
         calories: Math.round(dish.macros.calories * 0.8),
         protein: Math.round(dish.macros.protein * 1.25),
@@ -944,7 +908,6 @@ export function getDishRecommendationsFromAvailableIngredients(rawIngredientsTex
       fitnessReason = `⚡ 6-Pack Abs Shredder: Ultra-high protein to fat ratio with minimal simple carbs to strip subcutaneous body fat while preserving lean abdominal muscle.`;
       goalVersion = `⚡ FitGen Abs Cutting Modification: Ultra-lean preparation with egg whites/tofu and zero sodium seasoning.`;
     } else {
-      goalDishName = `✨ Balanced Energy: ${dish.dishName.replace(/FitGen|Authentic|High-Protein|Desi/g, '').trim()}`;
       macros = {
         calories: dish.macros.calories,
         protein: dish.macros.protein,
