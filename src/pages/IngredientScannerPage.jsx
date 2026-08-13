@@ -449,17 +449,35 @@ export default function IngredientScannerPage() {
         goal: targetGoal
       };
 
-      // Dual Model Processor
-      const botResponse = await queryDualAiModel({
-        userPrompt: currentText,
-        attachedFile: currentAttached ? currentAttached.file : null,
-        conversationHistory: messages,
-        userProfile: effectiveUserProfile
-      });
+      // Dual Model Processor with complete error safety
+      let botResponse = null;
+      try {
+        botResponse = await queryDualAiModel({
+          userPrompt: currentText,
+          attachedFile: currentAttached ? currentAttached.file : null,
+          conversationHistory: messages,
+          userProfile: effectiveUserProfile
+        });
+      } catch (aiErr) {
+        console.warn("⚠️ Dual model fetch warning:", aiErr);
+      }
 
-      const responseText = botResponse && botResponse.text && botResponse.text.trim()
+      // If dual model processor returned empty or null, compute local engine fallback
+      if (!botResponse || !botResponse.text || !botResponse.text.trim()) {
+        const localRes = processConversationalChatbotQuery(currentText, messages, effectiveUserProfile);
+        botResponse = {
+          source: 'FitGen Turbo Local Engine',
+          text: localRes.text,
+          dishAnalysis: localRes.dishAnalysis,
+          ingredientRecommendations: localRes.ingredientRecommendations,
+          relatedPhotos: localRes.relatedPhotos || getRelatedPhotos(currentText),
+          relevantVideos: localRes.relevantVideos || getVideosForIngredients(currentText)
+        };
+      }
+
+      const responseText = botResponse.text && botResponse.text.trim()
         ? botResponse.text
-        : "Here is your nutrition breakdown tailored for your active goal!";
+        : `Here is your complete nutrition breakdown for **${currentText}**!`;
 
       const aiReply = {
         id: `msg-ai-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
@@ -468,28 +486,24 @@ export default function IngredientScannerPage() {
         sourceModel: botResponse?.source || 'FitGen AI',
         dishAnalysis: botResponse?.dishAnalysis || null,
         ingredientRecommendations: botResponse?.ingredientRecommendations || null,
-        relatedPhotos: botResponse?.relatedPhotos || getRelatedPhotos(currentText),
-        relevantVideos: (botResponse?.relevantVideos || []).slice(0, 3)
+        relatedPhotos: (botResponse?.relatedPhotos && botResponse.relatedPhotos.length > 0) ? botResponse.relatedPhotos : getRelatedPhotos(currentText),
+        relevantVideos: (botResponse?.relevantVideos && botResponse.relevantVideos.length > 0) ? botResponse.relevantVideos.slice(0, 3) : getVideosForIngredients(currentText).slice(0, 3)
       };
 
       setMessages((prev) => [...prev, aiReply]);
     } catch (err) {
       console.error("Error generating AI analysis:", err);
-      let fallbackText = "⚠️ I couldn't generate your nutrition recommendation right now. Please try again.";
-      try {
-        const fallbackBotRes = processConversationalChatbotQuery(currentText, [], userProfile);
-        if (fallbackBotRes && fallbackBotRes.text) {
-          fallbackText = fallbackBotRes.text;
-        }
-      } catch (innerErr) {
-        console.error("Fallback error:", innerErr);
-      }
+      const fallbackBotRes = processConversationalChatbotQuery(currentText, [], userProfile);
 
       const errReply = {
         id: `msg-ai-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
         sender: 'ai',
-        text: fallbackText,
-        sourceModel: 'FitGen Turbo Local Engine (Fallback)'
+        text: fallbackBotRes?.text || `🍽️ **FitGen AI Nutrition Breakdown for "${currentText}"**:\n\nProvides optimal protein and calorie density tailored for your active fitness target!`,
+        sourceModel: 'FitGen Turbo Local Engine (Fallback)',
+        dishAnalysis: fallbackBotRes?.dishAnalysis || null,
+        ingredientRecommendations: fallbackBotRes?.ingredientRecommendations || null,
+        relatedPhotos: fallbackBotRes?.relatedPhotos || getRelatedPhotos(currentText),
+        relevantVideos: (fallbackBotRes?.relevantVideos || getVideosForIngredients(currentText)).slice(0, 3)
       };
       setMessages((prev) => [...prev, errReply]);
     } finally {
@@ -1045,7 +1059,7 @@ export default function IngredientScannerPage() {
                         </span>
                       </div>
                       <span className="text-[10px] font-bold text-emerald-400 bg-emerald-500/10 border border-emerald-500/30 px-2 py-0.5 rounded-full">
-                        High-Res Food Visuals
+                        Google & HD Food Visuals
                       </span>
                     </div>
 
@@ -1053,22 +1067,50 @@ export default function IngredientScannerPage() {
                       {(msg.relatedPhotos || []).map((photo, pIdx) => (
                         <div
                           key={photo.id || pIdx}
-                          onClick={() => setSelectedPhotoModal(photo)}
-                          className="group relative rounded-xl bg-slate-950 border border-slate-800 overflow-hidden shadow-sm hover:border-emerald-500/50 cursor-pointer transition-all aspect-video sm:aspect-square"
+                          className="group relative rounded-xl bg-slate-950 border border-slate-800 overflow-hidden shadow-sm hover:border-emerald-500/50 transition-all flex flex-col justify-between"
                         >
-                          <img
-                            src={photo.url}
-                            alt={photo.title || 'Food photo'}
-                            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                            loading="lazy"
-                          />
-                          <div className="absolute inset-0 bg-gradient-to-t from-slate-950/90 via-slate-950/20 to-transparent opacity-90 group-hover:opacity-100 transition-opacity p-2 flex flex-col justify-end">
-                            <p className="text-[11px] font-bold text-white leading-tight truncate">
-                              {photo.title}
-                            </p>
-                            <span className="text-[9px] text-emerald-400 font-semibold flex items-center gap-1 mt-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
-                              <ZoomIn className="w-2.5 h-2.5" /> Enlarge Photo
-                            </span>
+                          <div
+                            onClick={() => setSelectedPhotoModal(photo)}
+                            className="relative aspect-video sm:aspect-square w-full cursor-pointer overflow-hidden"
+                          >
+                            <img
+                              src={photo.url}
+                              alt={photo.title || 'Food photo'}
+                              className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                              loading="lazy"
+                            />
+                            <div className="absolute inset-0 bg-gradient-to-t from-slate-950/90 via-slate-950/20 to-transparent opacity-90 group-hover:opacity-100 transition-opacity p-2 flex flex-col justify-end">
+                              <p className="text-[11px] font-bold text-white leading-tight truncate">
+                                {photo.title}
+                              </p>
+                              <span className="text-[9px] text-emerald-400 font-semibold flex items-center gap-1 mt-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                                <ZoomIn className="w-2.5 h-2.5" /> Enlarge Lightbox
+                              </span>
+                            </div>
+                          </div>
+
+                          {/* Google & YouTube Direct Links */}
+                          <div className="p-1.5 bg-slate-950/90 flex items-center justify-between border-t border-slate-800/80 text-[10px]">
+                            <a
+                              href={`https://www.google.com/search?tbm=isch&q=${encodeURIComponent((photo.title || 'food') + ' recipe dish')}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="text-cyan-400 hover:text-cyan-300 font-extrabold flex items-center gap-1 hover:underline cursor-pointer"
+                              title="Search Google Images"
+                              onClick={(e) => e.stopPropagation()}
+                            >
+                              <ExternalLink className="w-2.5 h-2.5" /> Google
+                            </a>
+                            <a
+                              href={`https://www.youtube.com/results?search_query=${encodeURIComponent((photo.title || 'food') + ' recipe')}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="text-rose-400 hover:text-rose-300 font-extrabold flex items-center gap-1 hover:underline cursor-pointer"
+                              title="Search YouTube Videos"
+                              onClick={(e) => e.stopPropagation()}
+                            >
+                              <ExternalLink className="w-2.5 h-2.5" /> YouTube
+                            </a>
                           </div>
                         </div>
                       ))}
@@ -1087,7 +1129,7 @@ export default function IngredientScannerPage() {
                         </span>
                       </div>
                       <span className="text-[10px] font-bold text-emerald-400 bg-emerald-500/10 border border-emerald-500/30 px-2 py-0.5 rounded-full">
-                        AI Recipe Tutorials
+                        YouTube & AI Video Guides
                       </span>
                     </div>
 
@@ -1126,12 +1168,36 @@ export default function IngredientScannerPage() {
                             <p className="text-[10px] text-slate-400 line-clamp-1 mt-0.5">{vid.channel}</p>
                           </div>
 
-                          <button
-                            onClick={() => setSelectedVideoModal(vid)}
-                            className="mt-2 w-full py-1.5 rounded-lg bg-emerald-500/15 hover:bg-emerald-500 text-emerald-300 hover:text-slate-950 text-[11px] font-bold flex items-center justify-center gap-1 transition-all border border-emerald-500/30 cursor-pointer"
-                          >
-                            <Play className="w-3 h-3" /> Watch Video Tutorial
-                          </button>
+                          {/* Multi-Button Actions: Play Modal, YouTube Direct & Google Search */}
+                          <div className="mt-2.5 grid grid-cols-3 gap-1.5">
+                            <button
+                              onClick={() => setSelectedVideoModal(vid)}
+                              className="py-1.5 px-2 rounded-lg bg-emerald-500/15 hover:bg-emerald-500 text-emerald-300 hover:text-slate-950 text-[10px] font-extrabold flex items-center justify-center gap-1 transition-all border border-emerald-500/30 cursor-pointer"
+                              title="Play Video in FitGen Modal Player"
+                            >
+                              <Play className="w-3 h-3 fill-current" /> Play
+                            </button>
+                            <a
+                              href={vid.youtubeUrl || `https://www.youtube.com/results?search_query=${encodeURIComponent(vid.title + ' recipe')}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="py-1.5 px-2 rounded-lg bg-rose-500/15 hover:bg-rose-500 text-rose-300 hover:text-white text-[10px] font-extrabold flex items-center justify-center gap-1 transition-all border border-rose-500/30 cursor-pointer"
+                              title="Watch directly on YouTube"
+                              onClick={(e) => e.stopPropagation()}
+                            >
+                              <ExternalLink className="w-3 h-3" /> YouTube
+                            </a>
+                            <a
+                              href={`https://www.google.com/search?q=${encodeURIComponent(vid.title + ' recipe video')}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="py-1.5 px-2 rounded-lg bg-cyan-500/15 hover:bg-cyan-500 text-cyan-300 hover:text-slate-950 text-[10px] font-extrabold flex items-center justify-center gap-1 transition-all border border-cyan-500/30 cursor-pointer"
+                              title="Search Video on Google"
+                              onClick={(e) => e.stopPropagation()}
+                            >
+                              <ExternalLink className="w-3 h-3" /> Google
+                            </a>
+                          </div>
                         </div>
                       ))}
                     </div>
