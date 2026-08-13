@@ -18,7 +18,9 @@ import {
   LineChart,
   Award,
   LogOut,
-  Palette
+  Palette,
+  Bot,
+  ChefHat
 } from 'lucide-react';
 
 export default function Navbar() {
@@ -49,7 +51,8 @@ export default function Navbar() {
   const navItems = [
     { path: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
     { path: '/meal-planner', label: 'AI Meal Planner', icon: CalendarDays, badge: 'AI' },
-    { path: '/ingredient-scanner', label: 'FitGen AI Assistant & Recipe Generator', icon: Scan, badge: 'All-in-One' },
+    { path: '/ingredient-scanner?mode=chat', label: 'FitGen AI Assistant', icon: Bot, badge: 'AI' },
+    { path: '/ingredient-scanner?mode=generator', label: 'Recipe Generator', icon: ChefHat, badge: 'Instant' },
     {
       path: '/grocery',
       label: 'Grocery List',
@@ -113,13 +116,23 @@ export default function Navbar() {
 
           {/* Right Header Actions */}
           <div className="flex items-center gap-2.5 sm:gap-4">
-            {/* Quick AI Scanner Shortcut */}
+            {/* Quick AI Shortcuts */}
             <NavLink
-              to="/ingredient-scanner"
-              className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-xl bg-[#06B6D4]/10 border border-[#06B6D4]/30 text-[#06B6D4] hover:bg-[#06B6D4]/20 text-xs font-semibold transition-all group"
+              to="/ingredient-scanner?mode=chat"
+              className="hidden lg:flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#06B6D4]/10 border border-[#06B6D4]/30 text-[#06B6D4] hover:bg-[#06B6D4]/20 text-xs font-semibold transition-all group"
+              title="FitGen AI Assistant Chatbot"
             >
-              <Scan className="w-3.5 h-3.5 text-[#06B6D4] group-hover:scale-110 transition-transform" />
-              <span>AI Scanner</span>
+              <Bot className="w-3.5 h-3.5 text-[#06B6D4] group-hover:scale-110 transition-transform" />
+              <span>FitGen AI</span>
+            </NavLink>
+
+            <NavLink
+              to="/ingredient-scanner?mode=generator"
+              className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/20 text-xs font-semibold transition-all group"
+              title="Instant Pantry Recipe Generator"
+            >
+              <ChefHat className="w-3.5 h-3.5 text-emerald-400 group-hover:scale-110 transition-transform" />
+              <span>Recipe Generator</span>
             </NavLink>
 
             {/* Grocery List Shortcut */}

@@ -91,11 +91,18 @@ export default function IngredientScannerPage() {
     chatBottomRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages, isAnalyzing]);
 
-  // Handle search query passed via URL search params (e.g. from top Navbar search bar)
+  // Handle search query & mode passed via URL search params (e.g. from top Navbar)
   useEffect(() => {
     const params = new URLSearchParams(location.search);
     const searchParam = params.get('search');
+    const modeParam = params.get('mode');
+
+    if (modeParam && ['chat', 'generator', 'videos'].includes(modeParam)) {
+      setActiveMode(modeParam);
+    }
+
     if (searchParam && searchParam.trim()) {
+      setActiveMode('chat');
       handleSendPrompt(null, searchParam.trim());
       navigate(location.pathname, { replace: true });
     }
@@ -539,14 +546,26 @@ export default function IngredientScannerPage() {
           <div className="flex items-center gap-1.5 bg-slate-900/90 p-1 rounded-2xl border border-slate-800 self-stretch sm:self-auto overflow-x-auto">
             <button
               onClick={() => setActiveMode('chat')}
-              className={`px-4 py-2 rounded-xl font-extrabold text-xs flex items-center justify-center gap-2 transition-all cursor-pointer whitespace-nowrap ${
+              className={`px-3.5 py-2 rounded-xl font-extrabold text-xs flex items-center justify-center gap-2 transition-all cursor-pointer whitespace-nowrap ${
                 activeMode === 'chat'
                   ? 'bg-gradient-to-r from-emerald-500 to-teal-400 text-slate-950 shadow-lg shadow-emerald-500/20'
                   : 'text-slate-400 hover:text-white'
               }`}
             >
               <Bot className="w-4 h-4" />
-              <span>🤖 FitGen AI Assistant & Recipe Generator</span>
+              <span>🤖 FitGen AI Assistant</span>
+            </button>
+
+            <button
+              onClick={() => setActiveMode('generator')}
+              className={`px-3.5 py-2 rounded-xl font-extrabold text-xs flex items-center justify-center gap-2 transition-all cursor-pointer whitespace-nowrap ${
+                activeMode === 'generator'
+                  ? 'bg-gradient-to-r from-emerald-500 to-teal-400 text-slate-950 shadow-lg shadow-emerald-500/20 font-black'
+                  : 'text-slate-400 hover:text-white'
+              }`}
+            >
+              <ChefHat className="w-4 h-4 text-emerald-400" />
+              <span>⚡ Recipe Generator</span>
             </button>
 
             <button
@@ -561,7 +580,7 @@ export default function IngredientScannerPage() {
               <span>Nutrition Videos</span>
             </button>
 
-            {messages.length > 0 && (
+            {messages.length > 0 && activeMode === 'chat' && (
               <button
                 onClick={() => setMessages([])}
                 className="px-3.5 py-2 rounded-xl bg-slate-800 hover:bg-rose-500/20 hover:text-rose-400 text-slate-400 border border-slate-700 font-bold text-xs flex items-center gap-1.5 transition-all cursor-pointer whitespace-nowrap"
@@ -757,6 +776,24 @@ export default function IngredientScannerPage() {
                   <ArrowRight className="w-4 h-4 text-slate-500 group-hover:text-emerald-400 group-hover:translate-x-0.5 transition-all shrink-0" />
                 </button>
               ))}
+            </div>
+
+            {/* Mode Switcher Shortcut Cards */}
+            <div className="flex flex-wrap items-center justify-center gap-3 pt-2">
+              <button
+                onClick={() => setActiveMode('generator')}
+                className="px-4 py-2.5 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 hover:bg-emerald-500/20 text-emerald-300 font-bold text-xs flex items-center gap-2 transition-all cursor-pointer shadow-md"
+              >
+                <ChefHat className="w-4 h-4 text-emerald-400" />
+                <span>Switch to Pantry Recipe Generator</span>
+              </button>
+              <button
+                onClick={() => setActiveMode('videos')}
+                className="px-4 py-2.5 rounded-2xl bg-slate-900 border border-slate-800 hover:border-slate-700 text-slate-300 font-bold text-xs flex items-center gap-2 transition-all cursor-pointer shadow-md"
+              >
+                <Video className="w-4 h-4 text-cyan-400" />
+                <span>Watch Recipe Masterclass Videos</span>
+              </button>
             </div>
           </div>
         )}
