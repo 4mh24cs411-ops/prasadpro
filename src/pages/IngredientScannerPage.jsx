@@ -390,6 +390,7 @@ export default function IngredientScannerPage() {
   // Send Prompt handler
   const handleSendPrompt = async (e, overrideText = null) => {
     if (e) e.preventDefault();
+    if (isAnalyzing) return;
     const queryToUse = overrideText || promptText;
 
     if (!queryToUse.trim() && !attachedImage) return;
@@ -1207,7 +1208,7 @@ export default function IngredientScannerPage() {
                 )}
 
                 {/* Attached Relevant Nutrition & Cooking Videos (for single dish queries) */}
-                {msg.relevantVideos && msg.relevantVideos.length > 0 && !msg.ingredientRecommendations && (
+                {msg.relevantVideos && msg.relevantVideos.length > 0 && (!msg.ingredientRecommendations || msg.ingredientRecommendations.length === 0) && (
                   <div className="p-4 rounded-2xl bg-slate-900/90 border border-emerald-500/30 space-y-3 animate-in fade-in duration-300">
                     <div className="flex items-center justify-between border-b border-slate-800/80 pb-2.5">
                       <div className="flex items-center gap-2">

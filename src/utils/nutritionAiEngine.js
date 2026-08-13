@@ -541,8 +541,22 @@ export function getDetailedDishAnalysis(rawPrompt, userProfile) {
 
   if ((userDietary === 'Vegetarian' || userDietary === 'Vegan') && matchedDish.dietary === 'Non-Vegetarian') {
     finalCategory = userDietary;
-    adaptedDishName = adaptedDishName.replace(/Chicken|Tikka|Mutton|Fish|Beef/gi, (m) => userDietary === 'Vegan' ? 'Tofu' : 'Paneer');
-    if (!adaptedDishName.includes('Vegetarian')) {
+    const subName = userDietary === 'Vegan' ? 'Tofu' : 'Paneer';
+    
+    // Safely replace non-veg terms without duplicating
+    if (/Chicken Tikka/gi.test(adaptedDishName)) {
+      adaptedDishName = adaptedDishName.replace(/Chicken Tikka/gi, `${subName} Tikka`);
+    } else if (/Chicken Biryani/gi.test(adaptedDishName)) {
+      adaptedDishName = adaptedDishName.replace(/Chicken Biryani/gi, userDietary === 'Vegan' ? 'Soya Biryani' : 'Paneer Biryani');
+    } else {
+      adaptedDishName = adaptedDishName
+        .replace(/Chicken/gi, subName)
+        .replace(/Mutton/gi, 'Soya Chunks')
+        .replace(/Fish/gi, subName)
+        .replace(/Beef/gi, 'Soya Chunks');
+    }
+
+    if (!adaptedDishName.includes('Vegetarian') && !adaptedDishName.includes('Vegan')) {
       adaptedDishName = `🌱 100% ${userDietary} ${adaptedDishName.replace(/🔥 Fat-Loss Version:|💪 Mass-Gainer Version:|⚡ 6-Pack Abs Shredder:|✨ Balanced Energy:/g, '').trim()}`;
     }
     
@@ -1330,24 +1344,30 @@ export function processConversationalChatbotQuery(rawUserQuery, conversationHist
   const nation = userProfile?.nation || 'India 🇮🇳';
   const proteinTarget = userProfile?.dailyProteinGoal || 130;
 
+  if (!query) {
+    return {
+      text: `👋 Ask FitGen AI for any dish (e.g. 'Samosa', 'Chicken Tikka', 'Paneer Butter Masala', 'Fruit Bowl') or list your kitchen ingredients!`,
+      dishAnalysis: null,
+      ingredientRecommendations: null,
+      relevantVideos: []
+    };
+  }
+
   // 1. Greetings & Bot Intro Queries
-  const isGreeting = ['hi', 'hello', 'hey', 'greetings', 'who are you', 'what can you do', 'start'].some(w => lowerQuery === w || lowerQuery.startsWith(w + ' '));
+  const isGreeting = ['hi', 'hello', 'hey', 'greetings', 'who are you', 'what can you do', 'start', 'help'].some(w => lowerQuery === w || lowerQuery.startsWith(w + ' '));
   if (isGreeting) {
     return {
       text: `👋 Hello **${userName}**! I am your **FitGen AI ChatGPT Nutrition Assistant**.
 
-I am calibrated for your profile:
-• 🌱 **Dietary Preference**: **${dietary} (100% Verified)**
-• 🎯 **Fitness Goal**: **${goal}** (${proteinTarget}g Protein daily target)
+I am calibrated for your active profile:
+• 🌱 **Dietary Preference**: **${dietary}**
+• 🎯 **Fitness Goal**: **${goal}** (${proteinTarget}g Daily Protein Target)
 • 🇮🇳 **Residence / Region**: **${nation}**
 
-Here is what you can ask me right now:
-1. 💬 **Conversational Fitness & Nutrition Q&A** (e.g. *"How to lose weight safely?"*, *"How much protein is in 2 eggs?"*)
-2. 🥗 **Recipe Suggestions from Ingredients** (e.g. *"I have tomato, onion, capsicum"* or upload a photo!)
-3. 🍽️ **Authentic Dish Macro Breakdown** (e.g. *"Chicken Tikka"*, *"Paneer Butter Masala"*, *"Samosa"*)
-4. 🔄 **Recipe Refinements & Feedback** (Type *"I don't like this"* or *"Give me another recipe"* anytime!)
-
-How can I help fuel your training today?`,
+What would you like to ask me today?
+1. 🍽️ **Dish Macro Breakdown & Recipe**: Ask for *"Chicken Tikka"*, *"Paneer Butter Masala"*, *"Samosa"*, *"Fruit Bowl"*, *"Egg Rice"*!
+2. 🥗 **Recipes from Pantry Ingredients**: Type *"I have tomato, onion, paneer"* or upload a photo!
+3. 💬 **Fitness & Protein Q&A**: Ask *"How to gain muscle fast?"* or *"What to eat post workout?"*`,
       dishAnalysis: null,
       ingredientRecommendations: null,
       relevantVideos: []
@@ -1390,7 +1410,40 @@ Feel free to ask me to convert any specific dish to a low-calorie or higher-prot
     };
   }
 
-  // 4. General Nutrition, Fitness Goal & Weight Loss Recipe Suggestions
+  // 4. Check for Specific Known Dish or Dish Lookup Intent FIRST!
+  const matchedDish = findMatchingDish(query);
+  const isExplicitIngredientList = (query.includes(',') || query.includes('+') || lowerQuery.includes('i have') || lowerQuery.includes('my ingredients') || lowerQuery.includes('available ingredients')) && !matchedDish;
+
+  const isDishQuery = matchedDish || (!isExplicitIngredientList && (
+    lowerQuery.includes('recipe') ||
+    lowerQuery.includes('how to make') ||
+    lowerQuery.includes('how to cook') ||
+    lowerQuery.includes('ingredients for') ||
+    lowerQuery.includes('protein in') ||
+    lowerQuery.includes('calories in') ||
+    lowerQuery.includes('tikka') ||
+    lowerQuery.includes('samosa') ||
+    lowerQuery.includes('biryani') ||
+    lowerQuery.includes('masala') ||
+    lowerQuery.includes('bhurji') ||
+    lowerQuery.includes('bowl') ||
+    lowerQuery.includes('rice') ||
+    lowerQuery.includes('curry') ||
+    lowerQuery.includes('salad') ||
+    lowerQuery.includes('oats')
+  ));
+
+  if (isDishQuery || (!isExplicitIngredientList && !query.includes(' ') && query.length > 2)) {
+    const dishAnalysis = getDetailedDishAnalysis(query, userProfile);
+    return {
+      text: `Here is the authentic ingredient breakdown, protein content, and daily intake guide for **"${dishAnalysis.dishName}"** tailored for your **${dishAnalysis.dietary || dietary}** preference and **${goal}** goal:`,
+      dishAnalysis: dishAnalysis,
+      ingredientRecommendations: null,
+      relevantVideos: getVideosForIngredients(query)
+    };
+  }
+
+  // 5. General Nutrition, Fitness Goal & Weight Loss Recipe Suggestions
   const isWeightLossQuery = lowerQuery.includes('weight loss') || lowerQuery.includes('fat loss') || lowerQuery.includes('lose weight') || lowerQuery.includes('slimming');
   const isMuscleGainQuery = lowerQuery.includes('muscle gain') || lowerQuery.includes('hypertrophy') || lowerQuery.includes('mass') || lowerQuery.includes('gain weight');
   const isGeneralSuggestion = lowerQuery.includes('suggest') || lowerQuery.includes('recommend') || lowerQuery.includes('what to eat') || lowerQuery.includes('diet') || lowerQuery.includes('plan') || lowerQuery.includes('calorie');
@@ -1406,7 +1459,7 @@ Feel free to ask me to convert any specific dish to a low-calorie or higher-prot
       text: `🎯 **FitGen AI ${targetGoal} Nutrition & Recipe Recommendation**:
 
 I calibrated your request for **${targetGoal}** (${calTarget} | ${proteinTarget}g Protein target):
-• 🌱 **Dietary Preference**: **100% Verified ${dietary}**
+• 🌱 **Dietary Preference**: **${dietary}**
 • 🇮🇳 **Cuisine Style**: **${nation}**
 
 Here are 4 authentic regional **${nation}** high-protein recipes designed to help you succeed on your **${targetGoal}** plan:`,
@@ -1416,29 +1469,15 @@ Here are 4 authentic regional **${nation}** high-protein recipes designed to hel
     };
   }
 
-  // 5. Ingredient / Dish Processing (Food Ingredients list OR single dish query)
-  const containsFoodIng = ['tomato', 'paneer', 'chicken', 'egg', 'potato', 'peas', 'rice', 'dal', 'soya', 'oats', 'banana', 'curd', 'spinach', 'cabbage', 'carrot', 'beans', 'tofu', 'chickpeas', 'mushroom', 'beetroot', 'capsicum'].some(f => lowerQuery.includes(f));
-  const isIngredientList = query.includes(',') || query.includes('+') || containsFoodIng || lowerQuery.includes('have');
-
-  if (isIngredientList) {
-    const recs = getDishRecommendationsFromAvailableIngredients(query, userProfile);
-    const topProt = recs[0]?.macros?.protein || 0;
-    return {
-      text: `Recognized your available ingredients!
+  // 6. Ingredient List Processing (Multiple available ingredients in kitchen/pantry)
+  const recs = getDishRecommendationsFromAvailableIngredients(query, userProfile);
+  const topProt = recs[0]?.macros?.protein || 0;
+  return {
+    text: `Recognized your available ingredients!
 
 Based **STRICTLY on your provided ingredients**, here are authentic regional **${nation}** recipes tailored for your **${dietary}** preference and **${goal}** plan (${topProt}g base protein yield):`,
-      dishAnalysis: null,
-      ingredientRecommendations: recs,
-      relevantVideos: getVideosForIngredients(query)
-    };
-  }
-
-  // 6. Single Dish Analysis
-  const dishAnalysis = getDetailedDishAnalysis(query, userProfile);
-  return {
-    text: `Here is the authentic ingredient breakdown, protein content, and daily intake guide for **"${dishAnalysis.dishName}"** tailored for your **${dietary}** preference and **${goal}** goal:`,
-    dishAnalysis: dishAnalysis,
-    ingredientRecommendations: null,
+    dishAnalysis: null,
+    ingredientRecommendations: recs,
     relevantVideos: getVideosForIngredients(query)
   };
 }
