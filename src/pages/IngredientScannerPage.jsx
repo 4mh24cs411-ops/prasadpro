@@ -883,7 +883,7 @@ export default function IngredientScannerPage() {
                               <span className="text-emerald-400 font-bold">💪 {dish.macros.protein}g Protein</span>
                             </div>
 
-                            <div className="flex items-center gap-2">
+                            <div className="flex flex-wrap items-center gap-2">
                               <button
                                 onClick={() => scheduleMeal(dish, 'lunch', '01:15 PM')}
                                 className="px-3 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-slate-200 border border-slate-700 font-bold text-xs flex items-center gap-1.5 transition-all cursor-pointer shadow-sm active:scale-95"
@@ -895,11 +895,22 @@ export default function IngredientScannerPage() {
 
                               <button
                                 onClick={() => handleSelectRecommendedDish(dish)}
-                                className="px-4 py-2 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-500 hover:from-cyan-400 hover:to-blue-400 text-slate-950 font-extrabold text-xs flex items-center gap-1.5 transition-all shadow-md active:scale-95 cursor-pointer"
+                                className="px-3.5 py-2 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-500 hover:from-cyan-400 hover:to-blue-400 text-slate-950 font-extrabold text-xs flex items-center gap-1.5 transition-all shadow-md active:scale-95 cursor-pointer"
                               >
                                 <Utensils className="w-3.5 h-3.5" />
-                                <span>👨‍🍳 View Complete Step-by-Step Recipe</span>
+                                <span>👨‍🍳 View Recipe</span>
                               </button>
+
+                              <a
+                                href={`https://www.youtube.com/results?search_query=${encodeURIComponent(dish.dishName + ' recipe cooking tutorial')}`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="px-3 py-2 rounded-xl bg-rose-500/15 hover:bg-rose-500 text-rose-300 hover:text-white border border-rose-500/30 font-extrabold text-xs flex items-center gap-1.5 transition-all shadow-sm active:scale-95 cursor-pointer"
+                                title="Watch Cooking Video on YouTube"
+                              >
+                                <ExternalLink className="w-3.5 h-3.5" />
+                                <span>YouTube</span>
+                              </a>
                             </div>
                           </div>
                         </div>
@@ -923,13 +934,23 @@ export default function IngredientScannerPage() {
                         <p className="text-[11px] text-slate-400 mt-0.5">{msg.dishAnalysis.description}</p>
                       </div>
 
-                      <div className="flex items-center gap-2 shrink-0">
+                      <div className="flex flex-wrap items-center gap-2 shrink-0">
                         <span className="px-2.5 py-1 rounded-xl bg-emerald-500/20 text-emerald-400 border border-emerald-500/40 text-xs font-extrabold flex items-center gap-1">
                           <Flame className="w-3.5 h-3.5" /> Total: {msg.dishAnalysis.totalProtein}g Protein
                         </span>
                         <span className="px-2.5 py-1 rounded-xl bg-slate-800 text-slate-300 border border-slate-700 text-xs font-semibold">
                           {msg.dishAnalysis.totalCalories} kcal
                         </span>
+                        <a
+                          href={`https://www.youtube.com/results?search_query=${encodeURIComponent(msg.dishAnalysis.dishName + ' recipe cooking tutorial')}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="px-2.5 py-1 rounded-xl bg-rose-500/20 text-rose-300 border border-rose-500/40 text-xs font-extrabold flex items-center gap-1 hover:bg-rose-500 hover:text-white transition-all cursor-pointer shadow-sm"
+                          title="Watch Cooking Video on YouTube"
+                        >
+                          <ExternalLink className="w-3 h-3" />
+                          <span>YouTube Recipe</span>
+                        </a>
                       </div>
                     </div>
 

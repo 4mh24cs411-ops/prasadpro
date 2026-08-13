@@ -192,16 +192,43 @@ export default function RecipeDetailModal({
               </h1>
             </div>
 
-            {/* Prep & Cook Badges */}
-            <div className="flex items-center gap-3 text-xs text-slate-300 bg-slate-950/80 px-4 py-2 rounded-xl border border-slate-800 backdrop-blur-md">
-              <div className="flex items-center gap-1.5">
-                <Clock className="w-4 h-4 text-emerald-400" />
-                <span>Prep: <strong>{recipe.prepTime || '15 mins'}</strong></span>
+            {/* Prep, Cook Badges & External YouTube / Google Links */}
+            <div className="flex flex-wrap items-center gap-3">
+              <div className="flex items-center gap-3 text-xs text-slate-300 bg-slate-950/80 px-4 py-2 rounded-xl border border-slate-800 backdrop-blur-md">
+                <div className="flex items-center gap-1.5">
+                  <Clock className="w-4 h-4 text-emerald-400" />
+                  <span>Prep: <strong>{recipe.prepTime || '15 mins'}</strong></span>
+                </div>
+                <div className="w-px h-4 bg-slate-700"></div>
+                <div className="flex items-center gap-1.5">
+                  <Flame className="w-4 h-4 text-amber-400" />
+                  <span>Cook: <strong>{recipe.cookTime || '20 mins'}</strong></span>
+                </div>
               </div>
-              <div className="w-px h-4 bg-slate-700"></div>
-              <div className="flex items-center gap-1.5">
-                <Flame className="w-4 h-4 text-amber-400" />
-                <span>Cook: <strong>{recipe.cookTime || '20 mins'}</strong></span>
+
+              <div className="flex items-center gap-2">
+                <a
+                  href={youtubeSearchUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="px-3 py-2 rounded-xl bg-rose-600 hover:bg-rose-500 text-white font-extrabold text-xs flex items-center gap-1.5 shadow-md shadow-rose-600/30 transition-transform active:scale-95 cursor-pointer"
+                  title="Watch Cooking Video on YouTube"
+                >
+                  <Video className="w-3.5 h-3.5" />
+                  <span>YouTube</span>
+                  <ExternalLink className="w-3 h-3" />
+                </a>
+
+                <a
+                  href={`https://www.google.com/search?q=${encodeURIComponent(recipe.name + ' authentic recipe step by step')}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="px-3 py-2 rounded-xl bg-cyan-600 hover:bg-cyan-500 text-white font-extrabold text-xs flex items-center gap-1.5 shadow-md shadow-cyan-600/30 transition-transform active:scale-95 cursor-pointer"
+                  title="Search Recipe on Google"
+                >
+                  <ExternalLink className="w-3.5 h-3.5" />
+                  <span>Google</span>
+                </a>
               </div>
             </div>
           </div>
