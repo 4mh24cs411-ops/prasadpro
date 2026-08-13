@@ -74,7 +74,7 @@ export async function queryDualAiModel({ userPrompt, attachedFile, conversationH
     };
   }
 
-  // Call Real Google Gemini API
+  // Call Real Google Gemini API with 5s AbortController timeout
   try {
     const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${apiKey}`;
 
@@ -108,16 +108,26 @@ Provide a warm, detailed, accurate response. If ingredients or dishes are asked,
       });
     }
 
-    const response = await fetch(endpoint, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        contents: [{ parts: contentsParts }]
-      })
-    });
+    // Set 5 second timeout using AbortController to prevent hanging UI
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 5000);
+
+    let response;
+    try {
+      response = await fetch(endpoint, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          contents: [{ parts: contentsParts }]
+        }),
+        signal: controller.signal
+      });
+    } finally {
+      clearTimeout(timeoutId);
+    }
 
     if (!response.ok) {
-      const errData = await response.json();
+      const errData = await response.json().catch(() => ({}));
       throw new Error(errData.error?.message || `HTTP ${response.status}`);
     }
 
@@ -127,10 +137,14 @@ Provide a warm, detailed, accurate response. If ingredients or dishes are asked,
     // Also get structured recipe cards from local engine to attach if ingredients are mentioned
     const localFallback = processConversationalChatbotQuery(userPrompt || 'paneer, tomato, onion', conversationHistory, userProfile);
 
+    const finalResponseText = generatedText.trim()
+      ? `✨ **Google Gemini AI Model Response**:\n\n${generatedText}`
+      : localFallback.text;
+
     return {
       source: `Google Gemini 1.5 Flash API`,
       isRealGemini: true,
-      text: `✨ **Google Gemini AI Model Response**:\n\n${generatedText}`,
+      text: finalResponseText,
       dishAnalysis: localFallback.dishAnalysis,
       ingredientRecommendations: localFallback.ingredientRecommendations,
       relevantVideos: localFallback.relevantVideos || []
@@ -138,10 +152,15 @@ Provide a warm, detailed, accurate response. If ingredients or dishes are asked,
   } catch (err) {
     console.warn("⚠️ Gemini API Call Error, falling back to local model:", err.message);
     const localRes = processConversationalChatbotQuery(userPrompt || 'paneer', conversationHistory, userProfile);
+    const isTimeout = err.name === 'AbortError' || err.message?.includes('aborted');
+    const notice = isTimeout
+      ? `⚡ *(Gemini API timed out — using FitGen Turbo Local Engine)*\n\n`
+      : `⚡ *(Note: Using FitGen Turbo Local Engine)*\n\n`;
+
     return {
       source: 'FitGen Turbo Local Engine (Fallback)',
       isRealGemini: false,
-      text: `⚡ *(Gemini API fallback: ${err.message})*\n\n${localRes.text}`,
+      text: `${notice}${localRes.text}`,
       dishAnalysis: localRes.dishAnalysis,
       ingredientRecommendations: localRes.ingredientRecommendations,
       relevantVideos: localRes.relevantVideos || []

@@ -394,6 +394,11 @@ export default function IngredientScannerPage() {
 
     if (!queryToUse.trim() && !attachedImage) return;
 
+    // Automatically switch to chat mode if currently on another tab
+    if (activeMode !== 'chat') {
+      setActiveMode('chat');
+    }
+
     const currentAttached = attachedImage;
     const currentText = queryToUse;
 
@@ -410,7 +415,7 @@ export default function IngredientScannerPage() {
       imageName: currentAttached ? currentAttached.name : null
     };
 
-    // Instantly append user message to chat UI for zero-perceived-latency response
+    // Instantly append user message to chat UI
     setMessages((prev) => [...prev, userMsg]);
 
     try {
@@ -439,7 +444,7 @@ export default function IngredientScannerPage() {
         goal: targetGoal
       };
 
-      // Dual Model Processor (Calls Google Gemini 1.5/2.0 Flash API if configured, or FitGen Turbo Local Engine)
+      // Dual Model Processor
       const botResponse = await queryDualAiModel({
         userPrompt: currentText,
         attachedFile: currentAttached ? currentAttached.file : null,
@@ -447,14 +452,18 @@ export default function IngredientScannerPage() {
         userProfile: effectiveUserProfile
       });
 
+      const responseText = botResponse && botResponse.text && botResponse.text.trim()
+        ? botResponse.text
+        : "Here is your nutrition breakdown tailored for your active goal!";
+
       const aiReply = {
         id: `msg-ai-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
         sender: 'ai',
-        text: botResponse.text,
-        sourceModel: botResponse.source,
-        dishAnalysis: botResponse.dishAnalysis,
-        ingredientRecommendations: botResponse.ingredientRecommendations,
-        relevantVideos: (botResponse.relevantVideos || []).slice(0, 2)
+        text: responseText,
+        sourceModel: botResponse?.source || 'FitGen AI',
+        dishAnalysis: botResponse?.dishAnalysis || null,
+        ingredientRecommendations: botResponse?.ingredientRecommendations || null,
+        relevantVideos: (botResponse?.relevantVideos || []).slice(0, 2)
       };
 
       setMessages((prev) => [...prev, aiReply]);
@@ -462,12 +471,12 @@ export default function IngredientScannerPage() {
       console.error("Error generating AI analysis:", err);
       const fallbackBotRes = processConversationalChatbotQuery(currentText, messages, userProfile);
       const errReply = {
-        id: `msg-ai-${Date.now()}`,
+        id: `msg-ai-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
         sender: 'ai',
-        text: fallbackBotRes.text,
-        dishAnalysis: fallbackBotRes.dishAnalysis,
-        ingredientRecommendations: fallbackBotRes.ingredientRecommendations,
-        relevantVideos: (fallbackBotRes.relevantVideos || []).slice(0, 2)
+        text: fallbackBotRes?.text || "Here is your nutrition & dish breakdown!",
+        dishAnalysis: fallbackBotRes?.dishAnalysis || null,
+        ingredientRecommendations: fallbackBotRes?.ingredientRecommendations || null,
+        relevantVideos: (fallbackBotRes?.relevantVideos || []).slice(0, 2)
       };
       setMessages((prev) => [...prev, errReply]);
     } finally {
@@ -826,7 +835,7 @@ export default function IngredientScannerPage() {
                   )}
 
                   <div className="flex items-start justify-between gap-3">
-                    <p className="flex-1">{renderFormattedText(msg.text)}</p>
+                    <p className="flex-1 whitespace-pre-wrap">{renderFormattedText(msg.text)}</p>
 
                     {msg.sender === 'ai' && (
                       <button
@@ -1374,6 +1383,12 @@ export default function IngredientScannerPage() {
               type="text"
               value={promptText}
               onChange={(e) => setPromptText(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' && !e.shiftKey) {
+                  e.preventDefault();
+                  handleSendPrompt(e);
+                }
+              }}
               placeholder={isListening ? "Listening... Speak your dish name (e.g. 'Samosa')..." : "Ask FitGen AI for any dish (e.g. 'Samosa', 'Chicken Tikka', 'Fruit Bowl')..."}
               className="flex-1 bg-transparent px-3 py-2 text-sm text-slate-100 placeholder-slate-500 focus:outline-none"
             />
