@@ -139,9 +139,13 @@ Provide a warm, detailed, accurate response. If ingredients or dishes are asked,
     // Also get structured recipe cards from local engine to attach if ingredients are mentioned
     const localFallback = processConversationalChatbotQuery(userPrompt || 'paneer, tomato, onion', conversationHistory, userProfile);
 
-    const finalResponseText = generatedText.trim()
-      ? `✨ **Google Gemini AI Model Response**:\n\n${generatedText}`
-      : localFallback.text;
+    // If Gemini text is rich & detailed (> 200 chars and contains formatted sections), use it; otherwise use localFallback.text!
+    let finalResponseText = '';
+    if (generatedText.trim() && generatedText.trim().length > 200 && (generatedText.includes('###') || generatedText.includes('•'))) {
+      finalResponseText = `✨ **Google Gemini AI Model Response**:\n\n${generatedText}`;
+    } else {
+      finalResponseText = localFallback.text;
+    }
 
     return {
       source: `Google Gemini 1.5 Flash API`,

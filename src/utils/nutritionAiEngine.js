@@ -1832,8 +1832,9 @@ function formatIngredientResponseText(rawIngredientsText, recommendations = [], 
     const recCalories = rec.macros?.calories || baseTotalCalories || 280;
     const percentTarget = Math.min(100, Math.round((recProtein / dailyProteinTarget) * 100));
 
+    const cleanDishTitle = (rec.dishName || '').replace(/^[\u{1F300}-\u{1F9FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}\u{1F600}-\u{1F64F}\s]+/u, '').trim();
     text += `---\n\n`;
-    text += `### ${idx + 1}. ${icon} **${rec.dishName}**\n`;
+    text += `### ${idx + 1}. ${icon} **${cleanDishTitle}**\n`;
     text += `• ⚡ **Protein Yield**: **${recProtein}g Protein** (${percentTarget}% of your ${dailyProteinTarget}g daily target)\n`;
     text += `• 🔥 **Caloric Content**: **~${recCalories} kcal** | 🍞 Carbs: ~${rec.macros?.carbs || 28}g | 🧈 Fat: ~${rec.macros?.fat || 6}g | 🥬 Fiber: ~${rec.macros?.fiber || 8}g\n\n`;
     
