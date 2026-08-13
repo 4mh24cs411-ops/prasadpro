@@ -1372,10 +1372,10 @@ export function extractContextFromHistory(conversationHistory = []) {
 
     if (msg.sender === 'ai') {
       if (msg.dishAnalysis?.dishName && !lastDish) {
-        lastDish = msg.dishAnalysis.dishName;
+        lastDish = msg.dishAnalysis.dishName.replace(/[^\w\s,]/gi, '').replace(/MassGainer Version|FatLoss Version|6Pack Abs Shredder|Balanced Energy/gi, '').trim();
       }
       if (msg.ingredientRecommendations && msg.ingredientRecommendations.length > 0 && !lastDish) {
-        lastDish = msg.ingredientRecommendations[0].dishName;
+        lastDish = msg.ingredientRecommendations[0].dishName.replace(/[^\w\s,]/gi, '').replace(/MassGainer Version|FatLoss Version|6Pack Abs Shredder|Balanced Energy/gi, '').trim();
       }
     }
 
@@ -1437,7 +1437,7 @@ What would you like to ask me today?
     };
   }
 
-  // 2. Multi-Turn Context Follow-Ups ("make it high protein", "give me the recipe", "how many calories?", "make it low calorie", "show missing ingredients")
+  // 2. Multi-Turn Context Follow-Ups ("make it high protein", "give me the recipe", "how many calories?", "make it low calorie", "show missing ingredients", "give me more options")
   const isFollowUp = lowerQuery.includes('make it high protein') || 
                      lowerQuery.includes('high protein version') || 
                      lowerQuery.includes('make it low calorie') || 
@@ -1449,60 +1449,121 @@ What would you like to ask me today?
 
   if (isFollowUp) {
     const { lastIngredients, lastDish } = extractContextFromHistory(conversationHistory);
-    const activeSubject = lastDish || (lastIngredients.length > 0 ? lastIngredients.join(', ') : 'Paneer Butter Masala');
+    const ingredientsStr = lastIngredients.length > 0 ? lastIngredients.map(i => i.charAt(0).toUpperCase() + i.slice(1)).join(', ') : null;
+    const activeSubject = ingredientsStr || lastDish || 'tomato, cabbage, onion, carrot, beans';
 
     if (lowerQuery.includes('high protein')) {
-      const dishAnalysis = getDetailedDishAnalysis(activeSubject, { ...userProfile, goal: 'Muscle Gain' });
+      const recs = getDishRecommendationsFromAvailableIngredients(activeSubject, { ...userProfile, goal: 'Muscle Gain' });
+      const boosterName = dietary === 'Non-Vegetarian' ? 'Chicken Breast' : (dietary === 'Eggetarian' ? 'Hard-Boiled Egg Whites' : 'Fresh Paneer / Tofu Cubes');
+      const boosterProt = dietary === 'Non-Vegetarian' ? 46 : (dietary === 'Eggetarian' ? 22 : 28);
+      const boosterCal = dietary === 'Non-Vegetarian' ? 220 : (dietary === 'Eggetarian' ? 120 : 220);
+
+      recs.forEach(rec => {
+        rec.dishName = `💪 High-Protein ${rec.dishName.replace(/💪|Mass-Gainer Version:|Fat-Loss Version:/gi, '').trim()}`;
+        rec.macros.protein = Math.round((rec.macros.protein || 18) + boosterProt);
+        rec.macros.calories = Math.round((rec.macros.calories || 280) + boosterCal);
+        rec.fitnessGoalReason = `💪 Boosted with 150g ${boosterName} yielding ~${rec.macros.protein}g protein for rapid muscle recovery.`;
+      });
+
+      let text = `💪 **High-Protein Upgraded Meals for Your Request** (${activeSubject}):\n\n`;
+      text += `I upgraded your recipes by adding a high-protein booster (**150g ${boosterName}**) to reach your **${proteinTarget}g Daily Target**:\n\n`;
+
+      recs.slice(0, 3).forEach((rec, idx) => {
+        text += `---\n\n`;
+        text += `### ${idx + 1}. 🥘 **${rec.dishName}**\n`;
+        text += `**Why it matches**: Boosts **${activeSubject}** with extra protein density.\n\n`;
+        text += `**Ingredients Used**:\n`;
+        (rec.availableIngredientsUsed || []).forEach(ing => {
+          text += `• ${ing.icon || '🥗'} **${ing.name}**: ${ing.amount}\n`;
+        });
+        text += `• 💪 **High-Protein Booster**: 150g ${boosterName} (+${boosterProt}g protein)\n\n`;
+        text += `**Preparation Steps**:\n`;
+        (rec.instructions || []).forEach((step, sIdx) => {
+          text += `${sIdx + 1}. **${step.title}**: ${step.description}\n`;
+        });
+        text += `\n`;
+        text += `**Estimated Nutrition** *(Approximate per serving)*:\n`;
+        text += `• **Calories**: ~${rec.macros.calories} kcal\n`;
+        text += `• **Protein**: ~${rec.macros.protein} g *(High-Protein Boosted)*\n`;
+        text += `• **Carbohydrates**: ~${rec.macros.carbs || 32} g\n`;
+        text += `• **Fat**: ~${rec.macros.fat || 10} g\n`;
+        text += `• **Fiber**: ~${rec.macros.fiber || 8} g\n`;
+        text += `• **Serving Size**: 1 large portion (350g)\n`;
+        text += `• **Fitness Suitability**: ${rec.fitnessGoalReason}\n\n`;
+      });
+
+      text += `---\n\n💡 **FitGen Tip**: Consume your high-protein meal within 45 minutes after workout for optimal muscle protein synthesis!`;
+
       return {
-        text: `💪 **High-Protein Optimized Version of "${dishAnalysis.dishName}"**:
-
-I upgraded your previous dish **"${activeSubject}"** to maximize protein yield for your **${proteinTarget}g** daily target:
-• **Protein Booster**: Added 150g Fresh Paneer / Tofu / 3 Egg Whites (+28g Protein yield).
-• **Estimated Nutrition**: ~${dishAnalysis.totalCalories || 380} kcal | **${Math.max(32, (dishAnalysis.totalProtein || 25) + 12)}g Protein** | ~35g Carbs | ~8g Fat.
-
-**Modified Preparation Steps**:
-1. Follow standard prep for **${activeSubject}**.
-2. Pan-sear the extra protein booster (Paneer/Tofu/Egg Whites) separately for 3 mins.
-3. Fold into the cooked dish right before serving for maximum texture and amino acid retention!`,
-        dishAnalysis: dishAnalysis,
-        ingredientRecommendations: null,
+        text: text,
+        dishAnalysis: null,
+        ingredientRecommendations: recs,
         relevantVideos: getVideosForIngredients(activeSubject)
       };
     }
 
     if (lowerQuery.includes('recipe')) {
-      const dishAnalysis = getDetailedDishAnalysis(activeSubject, userProfile);
+      const recs = getDishRecommendationsFromAvailableIngredients(activeSubject, userProfile);
+      let text = `👨‍🍳 **Complete Recipe & Preparation Guide for Your Meals** (${activeSubject}):\n\n`;
+
+      recs.slice(0, 3).forEach((rec, idx) => {
+        text += `### ${idx + 1}. 🍲 **${rec.dishName}**\n`;
+        text += `**Ingredients Required**:\n`;
+        (rec.availableIngredientsUsed || []).forEach(i => {
+          text += `• ${i.icon || '🥗'} **${i.name}**: ${i.amount}\n`;
+        });
+        text += `\n**Step-by-Step Cooking Guide**:\n`;
+        (rec.instructions || []).forEach((s, sIdx) => {
+          text += `${sIdx + 1}. **${s.title}**: ${s.description}\n`;
+        });
+        text += `\n`;
+      });
+
       return {
-        text: `👨‍🍳 **Complete Recipe & Preparation Guide for "${dishAnalysis.dishName}"**:
-
-**Prep Time**: ${dishAnalysis.prepTime} | **Cook Time**: ${dishAnalysis.cookTime}
-
-**Ingredients Required**:
-${(dishAnalysis.ingredients || []).map(i => `• ${i.icon || '🥗'} **${i.name}**: ${i.amount} (${i.protein}g protein)`).join('\n')}
-
-**Step-by-Step Cooking Guide**:
-${(dishAnalysis.instructions || []).map((s, idx) => `${idx + 1}. **${s.title}**: ${s.description}`).join('\n')}`,
-        dishAnalysis: dishAnalysis,
-        ingredientRecommendations: null,
+        text: text,
+        dishAnalysis: null,
+        ingredientRecommendations: recs,
         relevantVideos: getVideosForIngredients(activeSubject)
       };
     }
 
     if (lowerQuery.includes('calories') || lowerQuery.includes('nutrition')) {
-      const dishAnalysis = getDetailedDishAnalysis(activeSubject, userProfile);
+      const recs = getDishRecommendationsFromAvailableIngredients(activeSubject, userProfile);
+      let text = `📊 **Estimated Nutritional Breakdown for Your Meals** (${activeSubject}):\n\n`;
+
+      recs.slice(0, 3).forEach((rec, idx) => {
+        text += `### ${idx + 1}. 🥘 **${rec.dishName}**\n`;
+        text += `• **Calories**: ~${rec.macros.calories} kcal\n`;
+        text += `• **Protein**: ~${rec.macros.protein} g\n`;
+        text += `• **Carbohydrates**: ~${rec.macros.carbs} g\n`;
+        text += `• **Fat**: ~${rec.macros.fat} g\n`;
+        text += `• **Fiber**: ~${rec.macros.fiber} g\n\n`;
+      });
+
+      text += `*Note: Nutritional figures are approximate estimated values derived from verified food density averages.*`;
+
       return {
-        text: `📊 **Estimated Nutritional Breakdown for "${dishAnalysis.dishName}"**:
+        text: text,
+        dishAnalysis: null,
+        ingredientRecommendations: recs,
+        relevantVideos: getVideosForIngredients(activeSubject)
+      };
+    }
 
-• **Calories**: ~${dishAnalysis.totalCalories} kcal
-• **Protein**: ~${dishAnalysis.totalProtein}g
-• **Carbohydrates**: ~${Math.round(dishAnalysis.totalProtein * 0.4)}g
-• **Fat**: ~${Math.round(dishAnalysis.totalProtein * 0.25)}g
-• **Fiber**: ~7g
-• **Serving Size**: 1 portion (300g)
+    if (lowerQuery.includes('missing ingredients')) {
+      const recs = getDishRecommendationsFromAvailableIngredients(activeSubject, userProfile);
+      let text = `🛒 **Optional Pantry Staples & Missing Ingredients** (${activeSubject}):\n\n`;
 
-*Note: Nutritional values are approximate estimated figures calculated from verified food database averages.*`,
-        dishAnalysis: dishAnalysis,
-        ingredientRecommendations: null,
+      recs.slice(0, 3).forEach((rec, idx) => {
+        text += `### ${idx + 1}. 🍲 **${rec.dishName}**\n`;
+        text += `**Available Ingredients Used**: ${rec.availableIngredientsUsed.map(i => i.name).join(', ')}\n`;
+        text += `**Missing / Optional Staples**: ${rec.optionalIngredients.map(o => `${o.name} (${o.amount})`).join(', ')}\n\n`;
+      });
+
+      return {
+        text: text,
+        dishAnalysis: null,
+        ingredientRecommendations: recs,
         relevantVideos: getVideosForIngredients(activeSubject)
       };
     }
