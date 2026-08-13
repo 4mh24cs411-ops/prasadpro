@@ -1440,20 +1440,83 @@ What would you like to ask me today?
     };
   }
 
-  // 2. Multi-Turn Context Follow-Ups ("make it high protein", "give me the recipe", "how many calories?", "make it low calorie", "show missing ingredients", "give me more options")
+  // 2. Multi-Turn Context Follow-Ups & Photo/Video Requests
   const isFollowUp = lowerQuery.includes('make it high protein') || 
                      lowerQuery.includes('high protein version') || 
                      lowerQuery.includes('make it low calorie') || 
+                     lowerQuery.includes('low calorie version') ||
                      lowerQuery.includes('give me the recipe') || 
                      lowerQuery.includes('how many calories') || 
                      lowerQuery.includes('show nutrition') || 
                      lowerQuery.includes('show missing ingredients') || 
-                     lowerQuery.includes('give me more options');
+                     lowerQuery.includes('give me more options') ||
+                     lowerQuery.includes('show me photos') ||
+                     lowerQuery.includes('show photos') ||
+                     lowerQuery === 'photos' ||
+                     lowerQuery.includes('show me videos') ||
+                     lowerQuery.includes('show videos') ||
+                     lowerQuery === 'videos' ||
+                     lowerQuery.includes('instead of') ||
+                     lowerQuery.includes('substitute') ||
+                     lowerQuery.includes('replace') ||
+                     lowerQuery.includes('swap');
 
   if (isFollowUp) {
     const { lastIngredients, lastDish } = extractContextFromHistory(conversationHistory);
     const ingredientsStr = lastIngredients.length > 0 ? lastIngredients.map(i => i.charAt(0).toUpperCase() + i.slice(1)).join(', ') : null;
     const activeSubject = ingredientsStr || lastDish || 'tomato, cabbage, onion, carrot, beans';
+
+    if (lowerQuery.includes('show me photos') || lowerQuery.includes('show photos') || lowerQuery === 'photos') {
+      return {
+        text: `📸 **Here are High-Definition Related Food Photos for "${activeSubject}"**:
+
+Tap any photo below to view in full-screen Lightbox mode!`,
+        dishAnalysis: null,
+        ingredientRecommendations: null,
+        relatedPhotos: getRelatedPhotos(activeSubject),
+        relevantVideos: getVideosForIngredients(activeSubject)
+      };
+    }
+
+    if (lowerQuery.includes('show me videos') || lowerQuery.includes('show videos') || lowerQuery === 'videos') {
+      return {
+        text: `🎥 **Here are Curated Recipe & Cooking Videos for "${activeSubject}"**:
+
+Click any video card below to start interactive video tutorial playback!`,
+        dishAnalysis: null,
+        ingredientRecommendations: null,
+        relatedPhotos: getRelatedPhotos(activeSubject),
+        relevantVideos: getVideosForIngredients(activeSubject)
+      };
+    }
+
+    if (lowerQuery.includes('instead of') || lowerQuery.includes('substitute') || lowerQuery.includes('replace') || lowerQuery.includes('swap')) {
+      return {
+        text: `💡 **FitGen AI High-Protein Culinary Substitution Guide** (${activeSubject}):
+
+Here are optimal ingredient swaps tailored for your **${dietary}** preference:
+
+• 🧀 **Instead of Paneer (Cottage Cheese)**:
+  - **Tofu (Firm)**: 15g protein per 150g, 60% lower calories, 100% Vegan & lactose-free.
+  - **Soya Chunks (Nutrela)**: 26g protein per 50g dry, high fiber and bioavailable amino acids.
+  - **Hard-Boiled Egg Whites**: 22g protein per 6 whites, zero fat.
+
+• 🍗 **Instead of Chicken Breast**:
+  - **Fish Fillet / Salmon**: 38g protein, high Omega-3 fatty acids.
+  - **Paneer Cubes**: 36g protein per 200g.
+  - **Moong Dal Sprouts & Tofu**: Plant-powered protein duo.
+
+• 🍚 **Instead of White Rice**:
+  - **Quinoa / Brown Rice**: Low glycemic index, high fiber complex carbs.
+  - **Cauliflower Rice**: Ultra low-calorie (25 kcal/cup) for fat loss.
+
+💡 **FitGen Tip**: Tell me which ingredient you want to substitute, and I'll recalculate your recipe macros!`,
+        dishAnalysis: null,
+        ingredientRecommendations: null,
+        relatedPhotos: getRelatedPhotos(activeSubject),
+        relevantVideos: getVideosForIngredients(activeSubject)
+      };
+    }
 
     if (lowerQuery.includes('high protein')) {
       const recs = getDishRecommendationsFromAvailableIngredients(activeSubject, { ...userProfile, goal: 'Muscle Gain' });
@@ -1496,6 +1559,49 @@ What would you like to ask me today?
       });
 
       text += `---\n\n💡 **FitGen Tip**: Consume your high-protein meal within 45 minutes after workout for optimal muscle protein synthesis!`;
+
+      return {
+        text: text,
+        dishAnalysis: null,
+        ingredientRecommendations: recs,
+        relatedPhotos: getRelatedPhotos(activeSubject),
+        relevantVideos: getVideosForIngredients(activeSubject)
+      };
+    }
+
+    if (lowerQuery.includes('low calorie')) {
+      const recs = getDishRecommendationsFromAvailableIngredients(activeSubject, { ...userProfile, goal: 'Weight Loss' });
+      recs.forEach(rec => {
+        rec.dishName = `🔥 Fat-Loss ${rec.dishName.replace(/💪|Mass-Gainer Version:|Fat-Loss Version:/gi, '').trim()}`;
+        rec.macros.calories = Math.round((rec.macros.calories || 280) * 0.75);
+        rec.macros.fat = Math.max(4, Math.round((rec.macros.fat || 8) * 0.5));
+        rec.fitnessGoalReason = `🔥 Calorie Deficit Version: Calibrated under ${rec.macros.calories} kcal with high fiber satiety to support fat loss.`;
+      });
+
+      let text = `🔥 **Low-Calorie Fat-Loss Upgraded Meals** (${activeSubject}):\n\n`;
+      text += `I calibrated your recipes for a **Calorie Deficit** while preserving high protein & fiber satiety:\n\n`;
+
+      recs.slice(0, 3).forEach((rec, idx) => {
+        text += `---\n\n`;
+        text += `### ${idx + 1}. 🥗 **${rec.dishName}**\n`;
+        text += `**Why it matches**: Low-calorie, high-fiber adaptation of **${activeSubject}**.\n\n`;
+        text += `**Ingredients Used**:\n`;
+        (rec.availableIngredientsUsed || []).forEach(ing => {
+          text += `• ${ing.icon || '🥗'} **${ing.name}**: ${ing.amount}\n`;
+        });
+        text += `\n**Preparation Steps**:\n`;
+        (rec.instructions || []).forEach((step, sIdx) => {
+          text += `${sIdx + 1}. **${step.title}**: ${step.description}\n`;
+        });
+        text += `\n**Estimated Nutrition** *(Approximate per serving)*:\n`;
+        text += `• **Calories**: ~${rec.macros.calories} kcal *(Calorie Deficit)*\n`;
+        text += `• **Protein**: ~${rec.macros.protein} g\n`;
+        text += `• **Carbohydrates**: ~${rec.macros.carbs || 28} g\n`;
+        text += `• **Fat**: ~${rec.macros.fat || 5} g\n`;
+        text += `• **Fiber**: ~${rec.macros.fiber || 9} g\n\n`;
+      });
+
+      text += `---\n\n💡 **FitGen Tip**: Cooking with air-fryer or 1 tsp cold-pressed oil saves ~120 kcal per meal!`;
 
       return {
         text: text,
@@ -1576,7 +1682,34 @@ What would you like to ask me today?
     }
   }
 
-  // 3. Conversational Q&A Intent ("calories in an egg", "is banana good before workout", "how to lose weight")
+  // 3. Post-Workout & Pre-Workout Queries
+  const isPostWorkout = lowerQuery.includes('post workout') || lowerQuery.includes('post-workout') || lowerQuery.includes('after gym') || lowerQuery.includes('after workout');
+  if (isPostWorkout) {
+    const seedIngs = dietary === 'Non-Vegetarian' ? 'chicken, rice, curd' : 'paneer, soya, oats, banana, milk';
+    const goalRecs = getDishRecommendationsFromAvailableIngredients(seedIngs, { ...userProfile, goal: 'Muscle Gain' });
+
+    let text = `🏋️ **FitGen AI Post-Workout Recovery Nutrition Guide**:\n\n`;
+    text += `Optimized for **Muscle Protein Synthesis & Glycogen Replenishment** (${proteinTarget}g Daily Protein Target):\n\n`;
+
+    goalRecs.slice(0, 3).forEach((rec, idx) => {
+      text += `### ${idx + 1}. 🥘 **${rec.dishName}**\n`;
+      text += `• **Ingredients**: ${rec.availableIngredientsUsed.map(i => i.name).join(', ')}\n`;
+      text += `• **Estimated Nutrition**: ~${rec.macros.calories} kcal | **~${rec.macros.protein}g Protein** | ~${rec.macros.carbs}g Carbs\n`;
+      text += `• **Fitness Suitability**: ${rec.fitnessGoalReason}\n\n`;
+    });
+
+    text += `💡 **FitGen Post-Workout Rule**: Consume 25g–45g fast-digesting bioavailable protein with complex carbs within 45 minutes after training!`;
+
+    return {
+      text: text,
+      dishAnalysis: null,
+      ingredientRecommendations: goalRecs,
+      relatedPhotos: getRelatedPhotos('workout'),
+      relevantVideos: getVideosForIngredients('workout')
+    };
+  }
+
+  // 4. Conversational Q&A Intent ("calories in an egg", "is banana good before workout")
   if (lowerQuery.includes('calorie') && (lowerQuery.includes('egg') || lowerQuery.includes('an egg'))) {
     return {
       text: `🥚 **Nutritional Breakdown for Farm Eggs**:
@@ -1610,7 +1743,7 @@ What would you like to ask me today?
     };
   }
 
-  // 4. Feedback & Substitution Intent
+  // 5. Feedback & Substitution Intent
   const isFeedback = lowerQuery.includes("don't like") || lowerQuery.includes("dont like") || lowerQuery.includes("another recipe") || lowerQuery.includes("different dish") || lowerQuery.includes("dislike");
   if (isFeedback) {
     const seedIngs = dietary === 'Non-Vegetarian' ? 'chicken, rice, curd, tomato' : 'paneer, soya, dal, rice, curd, oats';
