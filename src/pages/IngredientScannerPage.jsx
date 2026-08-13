@@ -475,7 +475,31 @@ export default function IngredientScannerPage() {
         };
       }
 
-      const responseText = botResponse.text && botResponse.text.trim()
+      // Ultra-safe photo and video extraction with complete error isolation
+      let finalPhotos = [];
+      let finalVideos = [];
+
+      try {
+        if (botResponse?.relatedPhotos && Array.isArray(botResponse.relatedPhotos) && botResponse.relatedPhotos.length > 0) {
+          finalPhotos = botResponse.relatedPhotos;
+        } else {
+          finalPhotos = getRelatedPhotos(currentText) || [];
+        }
+      } catch (pErr) {
+        finalPhotos = getRelatedPhotos('vegetables') || [];
+      }
+
+      try {
+        if (botResponse?.relevantVideos && Array.isArray(botResponse.relevantVideos) && botResponse.relevantVideos.length > 0) {
+          finalVideos = botResponse.relevantVideos.slice(0, 3);
+        } else {
+          finalVideos = (getVideosForIngredients(currentText) || []).slice(0, 3);
+        }
+      } catch (vErr) {
+        finalVideos = (getVideosForIngredients('vegetables') || []).slice(0, 3);
+      }
+
+      const responseText = botResponse?.text && botResponse.text.trim()
         ? botResponse.text
         : `Here is your complete nutrition breakdown for **${currentText}**!`;
 
@@ -486,24 +510,43 @@ export default function IngredientScannerPage() {
         sourceModel: botResponse?.source || 'FitGen AI',
         dishAnalysis: botResponse?.dishAnalysis || null,
         ingredientRecommendations: botResponse?.ingredientRecommendations || null,
-        relatedPhotos: (botResponse?.relatedPhotos && botResponse.relatedPhotos.length > 0) ? botResponse.relatedPhotos : getRelatedPhotos(currentText),
-        relevantVideos: (botResponse?.relevantVideos && botResponse.relevantVideos.length > 0) ? botResponse.relevantVideos.slice(0, 3) : getVideosForIngredients(currentText).slice(0, 3)
+        relatedPhotos: finalPhotos,
+        relevantVideos: finalVideos
       };
 
       setMessages((prev) => [...prev, aiReply]);
     } catch (err) {
       console.error("Error generating AI analysis:", err);
-      const fallbackBotRes = processConversationalChatbotQuery(currentText, [], userProfile);
+      let fallbackText = `🍽️ **FitGen AI Recipe & Nutrition Breakdown for "${currentText}"**:\n\nBased on your typed ingredients (**${currentText}**), here are your custom recipe recommendations and macro estimates!`;
+      let fallbackDishAnalysis = null;
+      let fallbackIngRecs = null;
+
+      try {
+        const fallbackBotRes = processConversationalChatbotQuery(currentText, [], userProfile);
+        if (fallbackBotRes) {
+          if (fallbackBotRes.text) fallbackText = fallbackBotRes.text;
+          fallbackDishAnalysis = fallbackBotRes.dishAnalysis || null;
+          fallbackIngRecs = fallbackBotRes.ingredientRecommendations || null;
+        }
+      } catch (innerErr) {
+        console.error("Fallback engine error:", innerErr);
+      }
+
+      let safeFallbackPhotos = [];
+      let safeFallbackVideos = [];
+
+      try { safeFallbackPhotos = getRelatedPhotos(currentText) || []; } catch (e) {}
+      try { safeFallbackVideos = (getVideosForIngredients(currentText) || []).slice(0, 3); } catch (e) {}
 
       const errReply = {
         id: `msg-ai-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
         sender: 'ai',
-        text: fallbackBotRes?.text || `🍽️ **FitGen AI Nutrition Breakdown for "${currentText}"**:\n\nProvides optimal protein and calorie density tailored for your active fitness target!`,
-        sourceModel: 'FitGen Turbo Local Engine (Fallback)',
-        dishAnalysis: fallbackBotRes?.dishAnalysis || null,
-        ingredientRecommendations: fallbackBotRes?.ingredientRecommendations || null,
-        relatedPhotos: fallbackBotRes?.relatedPhotos || getRelatedPhotos(currentText),
-        relevantVideos: (fallbackBotRes?.relevantVideos || getVideosForIngredients(currentText)).slice(0, 3)
+        text: fallbackText,
+        sourceModel: 'FitGen Turbo Local Engine',
+        dishAnalysis: fallbackDishAnalysis,
+        ingredientRecommendations: fallbackIngRecs,
+        relatedPhotos: safeFallbackPhotos,
+        relevantVideos: safeFallbackVideos
       };
       setMessages((prev) => [...prev, errReply]);
     } finally {

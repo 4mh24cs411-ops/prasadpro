@@ -372,38 +372,46 @@ export function getUniqueFoodImage(dishName = '', ingredientsStr = '') {
  * Intelligent video search matching algorithm for typed ingredients.
  */
 export function getVideosForIngredients(inputQuery) {
-  if (!inputQuery || typeof inputQuery !== 'string' || !inputQuery.trim()) {
-    return CURATED_NUTRITION_VIDEOS.slice(0, 2);
+  try {
+    if (!inputQuery || typeof inputQuery !== 'string' || !inputQuery.trim()) {
+      return (CURATED_NUTRITION_VIDEOS || []).slice(0, 2);
+    }
+
+    const queryClean = inputQuery.toLowerCase().trim();
+
+    // Strict matching against curated video library with safe guards
+    const matched = (CURATED_NUTRITION_VIDEOS || []).filter(video => {
+      if (!video) return false;
+      const titleLower = (video.title || '').toLowerCase();
+      const catLower = (video.category || '').toLowerCase();
+      const ingLower = Array.isArray(video.ingredients)
+        ? video.ingredients.map(i => (i || '').toLowerCase())
+        : [];
+
+      return (
+        (titleLower && titleLower.includes(queryClean)) ||
+        ingLower.some(ing => ing && (queryClean.includes(ing) || ing.includes(queryClean)))
+      );
+    });
+
+    // Return strictly matched videos if available
+    if (matched.length >= 2) {
+      return matched.slice(0, 2);
+    }
+
+    if (matched.length === 1) {
+      const dynamicCard = createDynamicIngredientVideoCard(inputQuery, 2);
+      return [matched[0], dynamicCard];
+    }
+
+    // Create 2 100% relevant dynamic video cards tailored for the exact query!
+    const card1 = createDynamicIngredientVideoCard(inputQuery, 1);
+    const card2 = createDynamicIngredientVideoCard(inputQuery, 2);
+    return [card1, card2];
+  } catch (err) {
+    console.warn("getVideosForIngredients safe fallback:", err);
+    return (CURATED_NUTRITION_VIDEOS || []).slice(0, 2);
   }
-
-  const queryClean = inputQuery.toLowerCase().trim();
-
-  // Strict matching against curated video library
-  const matched = CURATED_NUTRITION_VIDEOS.filter(video => {
-    const titleLower = video.title.toLowerCase();
-    const catLower = video.category.toLowerCase();
-    const ingLower = video.ingredients.map(i => i.toLowerCase());
-
-    return (
-      titleLower.includes(queryClean) ||
-      ingLower.some(ing => queryClean.includes(ing) || ing.includes(queryClean))
-    );
-  });
-
-  // Return strictly matched videos if available
-  if (matched.length >= 2) {
-    return matched.slice(0, 2);
-  }
-
-  if (matched.length === 1) {
-    const dynamicCard = createDynamicIngredientVideoCard(inputQuery, 2);
-    return [matched[0], dynamicCard];
-  }
-
-  // Create 2 100% relevant dynamic video cards tailored for the exact query!
-  const card1 = createDynamicIngredientVideoCard(inputQuery, 1);
-  const card2 = createDynamicIngredientVideoCard(inputQuery, 2);
-  return [card1, card2];
 }
 
 /**
