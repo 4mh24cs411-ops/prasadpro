@@ -470,14 +470,21 @@ export default function IngredientScannerPage() {
       setMessages((prev) => [...prev, aiReply]);
     } catch (err) {
       console.error("Error generating AI analysis:", err);
-      const fallbackBotRes = processConversationalChatbotQuery(currentText, messages, userProfile);
+      let fallbackText = "⚠️ I couldn't generate your nutrition recommendation right now. Please try again.";
+      try {
+        const fallbackBotRes = processConversationalChatbotQuery(currentText, [], userProfile);
+        if (fallbackBotRes && fallbackBotRes.text) {
+          fallbackText = fallbackBotRes.text;
+        }
+      } catch (innerErr) {
+        console.error("Fallback error:", innerErr);
+      }
+
       const errReply = {
         id: `msg-ai-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
         sender: 'ai',
-        text: fallbackBotRes?.text || "Here is your nutrition & dish breakdown!",
-        dishAnalysis: fallbackBotRes?.dishAnalysis || null,
-        ingredientRecommendations: fallbackBotRes?.ingredientRecommendations || null,
-        relevantVideos: (fallbackBotRes?.relevantVideos || []).slice(0, 2)
+        text: fallbackText,
+        sourceModel: 'FitGen Turbo Local Engine (Fallback)'
       };
       setMessages((prev) => [...prev, errReply]);
     } finally {
@@ -1273,29 +1280,49 @@ export default function IngredientScannerPage() {
                 {msg.sender === 'ai' && (
                   <div className="pt-2 flex flex-wrap items-center gap-2">
                     <span className="text-[11px] font-bold text-slate-400 flex items-center gap-1">
-                      <Sparkles className="w-3.5 h-3.5 text-emerald-400" /> Interactive Chatbot Options:
+                      <Sparkles className="w-3.5 h-3.5 text-emerald-400" /> Dynamic Suggestions:
                     </span>
 
                     <button
-                      onClick={() => handleSendPrompt(null, `I don't like this recipe. Please suggest a completely different alternative recipe for my ${userProfile.dietary || 'Vegetarian'} preference and ${userProfile.goal || 'Weight Loss'} goal.`)}
+                      onClick={() => handleSendPrompt(null, "give me the recipe")}
                       className="px-3 py-1.5 rounded-xl bg-slate-900 hover:bg-slate-800 border border-slate-700 text-slate-200 hover:text-white text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer shadow-sm active:scale-95"
                     >
-                      <RefreshCw className="w-3.5 h-3.5 text-emerald-400" />
-                      <span>🔄 Suggest Alternative Recipe</span>
+                      🍳 <span>Give me the recipe</span>
                     </button>
 
                     <button
-                      onClick={() => handleSendPrompt(null, `What ingredients can I substitute or replace in this dish for lower calories and higher protein?`)}
-                      className="px-3 py-1.5 rounded-xl bg-slate-900 hover:bg-slate-800 border border-slate-700 text-slate-200 hover:text-white text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer shadow-sm active:scale-95"
-                    >
-                      💬 <span>Ask Chatbot for Substitutes & Cooking Tips</span>
-                    </button>
-
-                    <button
-                      onClick={() => handleSendPrompt(null, `Suggest a 100% ${userProfile.dietary || 'Vegetarian'} high-protein recipe for ${userProfile.goal || 'Weight Loss'}.`)}
+                      onClick={() => handleSendPrompt(null, "make it high protein")}
                       className="px-3 py-1.5 rounded-xl bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/30 text-emerald-300 text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer shadow-sm active:scale-95"
                     >
-                      🌱 <span>Suggest 100% {userProfile.dietary || 'Vegetarian'} Dish</span>
+                      💪 <span>Make it high protein</span>
+                    </button>
+
+                    <button
+                      onClick={() => handleSendPrompt(null, "make it low calorie")}
+                      className="px-3 py-1.5 rounded-xl bg-slate-900 hover:bg-slate-800 border border-slate-700 text-slate-200 hover:text-white text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer shadow-sm active:scale-95"
+                    >
+                      🔥 <span>Make it low calorie</span>
+                    </button>
+
+                    <button
+                      onClick={() => handleSendPrompt(null, "give me more options")}
+                      className="px-3 py-1.5 rounded-xl bg-slate-900 hover:bg-slate-800 border border-slate-700 text-slate-200 hover:text-white text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer shadow-sm active:scale-95"
+                    >
+                      🥗 <span>Give me more options</span>
+                    </button>
+
+                    <button
+                      onClick={() => handleSendPrompt(null, "show nutrition")}
+                      className="px-3 py-1.5 rounded-xl bg-slate-900 hover:bg-slate-800 border border-slate-700 text-slate-200 hover:text-white text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer shadow-sm active:scale-95"
+                    >
+                      📊 <span>Show nutrition</span>
+                    </button>
+
+                    <button
+                      onClick={() => handleSendPrompt(null, "show missing ingredients")}
+                      className="px-3 py-1.5 rounded-xl bg-slate-900 hover:bg-slate-800 border border-slate-700 text-slate-200 hover:text-white text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer shadow-sm active:scale-95"
+                    >
+                      🛒 <span>Show missing ingredients</span>
                     </button>
                   </div>
                 )}
