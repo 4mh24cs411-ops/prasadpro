@@ -101,8 +101,10 @@ export default function IngredientScannerPage() {
     const searchParam = params.get('search');
     const modeParam = params.get('mode');
 
-    if (modeParam && ['chat', 'generator', 'videos'].includes(modeParam)) {
-      setActiveMode(modeParam);
+    if (modeParam === 'videos') {
+      setActiveMode('videos');
+    } else {
+      setActiveMode('chat');
     }
 
     if (searchParam && searchParam.trim()) {
@@ -570,24 +572,12 @@ export default function IngredientScannerPage() {
               onClick={() => setActiveMode('chat')}
               className={`px-3.5 py-2 rounded-xl font-extrabold text-xs flex items-center justify-center gap-2 transition-all cursor-pointer whitespace-nowrap ${
                 activeMode === 'chat'
-                  ? 'bg-gradient-to-r from-emerald-500 to-teal-400 text-slate-950 shadow-lg shadow-emerald-500/20'
-                  : 'text-slate-400 hover:text-white'
-              }`}
-            >
-              <Bot className="w-4 h-4" />
-              <span>🤖 FitGen AI Assistant</span>
-            </button>
-
-            <button
-              onClick={() => setActiveMode('generator')}
-              className={`px-3.5 py-2 rounded-xl font-extrabold text-xs flex items-center justify-center gap-2 transition-all cursor-pointer whitespace-nowrap ${
-                activeMode === 'generator'
                   ? 'bg-gradient-to-r from-emerald-500 to-teal-400 text-slate-950 shadow-lg shadow-emerald-500/20 font-black'
                   : 'text-slate-400 hover:text-white'
               }`}
             >
-              <ChefHat className="w-4 h-4 text-emerald-400" />
-              <span>⚡ Recipe Generator</span>
+              <Bot className="w-4 h-4 text-slate-950" />
+              <span>🤖 FitGen AI & Recipe Generator</span>
             </button>
 
             <button
@@ -681,93 +671,6 @@ export default function IngredientScannerPage() {
       <div className="flex-1 overflow-y-auto py-6 max-w-4xl w-full mx-auto flex flex-col px-4">
         {activeMode === 'videos' ? (
           <IngredientVideoFinder />
-        ) : activeMode === 'generator' ? (
-          <div className="space-y-6 max-w-3xl mx-auto w-full py-4 animate-in fade-in duration-300">
-            <div className="p-6 rounded-3xl bg-slate-900/90 border border-emerald-500/40 space-y-5 shadow-2xl">
-              <div className="flex items-center gap-3">
-                <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-emerald-500 to-teal-400 text-slate-950 flex items-center justify-center shadow-lg shadow-emerald-500/20">
-                  <ChefHat className="w-6 h-6" />
-                </div>
-                <div>
-                  <h2 className="text-lg font-extrabold text-white font-heading flex items-center gap-2">
-                    ⚡ Instant AI Fitness Recipe Generator
-                  </h2>
-                  <p className="text-xs text-slate-400">
-                    Select your available pantry ingredients below or type custom ingredients to generate realistic fitness recipes!
-                  </p>
-                </div>
-              </div>
-
-              {/* Select Pantry Ingredients Checkbox Chips */}
-              <div className="space-y-2.5">
-                <label className="text-xs font-extrabold text-emerald-400 uppercase tracking-wider block">
-                  1. Select Available Ingredients from Your Pantry:
-                </label>
-                <div className="flex flex-wrap gap-2">
-                  {['tomato', 'cabbage', 'onion', 'carrot', 'beans', 'spinach', 'paneer', 'chicken', 'egg', 'curd', 'nuts', 'potato', 'peas', 'rice', 'dal', 'soya', 'oats', 'banana'].map((ing) => {
-                    const isSelected = selectedPantryIngs.includes(ing);
-                    return (
-                      <button
-                        key={ing}
-                        type="button"
-                        onClick={() => {
-                          if (isSelected) {
-                            setSelectedPantryIngs(selectedPantryIngs.filter(i => i !== ing));
-                          } else {
-                            setSelectedPantryIngs([...selectedPantryIngs, ing]);
-                          }
-                        }}
-                        className={`px-3 py-1.5 rounded-xl text-xs font-extrabold transition-all flex items-center gap-1.5 cursor-pointer border ${
-                          isSelected
-                            ? 'bg-emerald-500 text-slate-950 border-emerald-400 shadow-md scale-105'
-                            : 'bg-slate-950 text-slate-300 border-slate-800 hover:border-slate-700'
-                        }`}
-                      >
-                        <span>{isSelected ? '✓' : '+'}</span>
-                        <span className="capitalize">{ing}</span>
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-
-              {/* Custom Ingredients Input */}
-              <div className="space-y-2">
-                <label className="text-xs font-extrabold text-slate-300 uppercase tracking-wider block">
-                  2. Or Type Custom Ingredients (comma separated):
-                </label>
-                <input
-                  type="text"
-                  value={generatorInputText}
-                  onChange={(e) => setGeneratorInputText(e.target.value)}
-                  placeholder="e.g. tomato, cabbage, onion, carrot, beans OR tomato, oil, nuts, curd, salt, pepper"
-                  className="w-full px-4 py-3 rounded-2xl bg-slate-950 border border-slate-800 text-white placeholder-slate-500 focus:outline-none focus:border-emerald-400 text-xs font-semibold"
-                />
-              </div>
-
-              {/* Generate Button */}
-              <button
-                onClick={() => {
-                  const combined = [
-                    ...selectedPantryIngs,
-                    ...(generatorInputText ? generatorInputText.split(/[\n,;+&]+/).map(t => t.trim()).filter(Boolean) : [])
-                  ].join(', ');
-
-                  if (!combined.trim()) {
-                    addToast('Please select or type at least one ingredient!', 'error');
-                    return;
-                  }
-
-                  setActiveMode('chat');
-                  handleSendPrompt(null, combined);
-                }}
-                className="w-full py-3.5 rounded-2xl bg-gradient-to-r from-emerald-500 via-teal-400 to-emerald-400 hover:from-emerald-400 hover:to-teal-300 text-slate-950 font-black text-sm flex items-center justify-center gap-2 transition-all shadow-xl active:scale-98 cursor-pointer"
-              >
-                <Sparkles className="w-5 h-5 fill-slate-950" />
-                <span>✨ Generate Custom Fitness Recipes from Ingredients</span>
-              </button>
-            </div>
-          </div>
         ) : (
           <>
             {/* ChatGPT Empty Welcome Hero Screen (renders ONLY when messages.length === 0) */}
