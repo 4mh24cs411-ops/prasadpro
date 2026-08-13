@@ -32,10 +32,13 @@ import {
   Lock,
   Check,
   Scan,
-  Calendar
+  Calendar,
+  Camera,
+  ZoomIn
 } from 'lucide-react';
 import IngredientVideoFinder from '../components/IngredientVideoFinder';
 import { getVideosForIngredients } from '../data/nutritionVideosData';
+import { getRelatedPhotos } from '../services/mediaSearchService';
 
 const SUGGESTION_CHIPS = [
   { label: '⚡ 6-Pack Abs Shred Diet Bowl', prompt: '6 pack abs diet meal and protein content' },
@@ -60,6 +63,7 @@ export default function IngredientScannerPage() {
 
   const [selectedRecipeModal, setSelectedRecipeModal] = useState(null);
   const [selectedVideoModal, setSelectedVideoModal] = useState(null);
+  const [selectedPhotoModal, setSelectedPhotoModal] = useState(null);
   const [videoPlayerSource, setVideoPlayerSource] = useState('mp4'); // 'mp4' or 'youtube'
   const [isListening, setIsListening] = useState(false);
 
@@ -464,7 +468,8 @@ export default function IngredientScannerPage() {
         sourceModel: botResponse?.source || 'FitGen AI',
         dishAnalysis: botResponse?.dishAnalysis || null,
         ingredientRecommendations: botResponse?.ingredientRecommendations || null,
-        relevantVideos: (botResponse?.relevantVideos || []).slice(0, 2)
+        relatedPhotos: botResponse?.relatedPhotos || getRelatedPhotos(currentText),
+        relevantVideos: (botResponse?.relevantVideos || []).slice(0, 3)
       };
 
       setMessages((prev) => [...prev, aiReply]);
@@ -1214,18 +1219,60 @@ export default function IngredientScannerPage() {
                   </div>
                 )}
 
-                {/* Attached Relevant Nutrition & Cooking Videos (for single dish queries) */}
-                {msg.relevantVideos && msg.relevantVideos.length > 0 && (!msg.ingredientRecommendations || msg.ingredientRecommendations.length === 0) && (
+                {/* 📸 Related Food Photos Gallery */}
+                {msg.sender === 'ai' && (msg.relatedPhotos || []).length > 0 && (
+                  <div className="p-4 rounded-2xl bg-slate-900/90 border border-emerald-500/30 space-y-3 animate-in fade-in duration-300">
+                    <div className="flex items-center justify-between border-b border-slate-800/80 pb-2.5">
+                      <div className="flex items-center gap-2">
+                        <Camera className="w-4 h-4 text-emerald-400" />
+                        <span className="text-xs font-bold text-white font-heading">
+                          📸 Related Food Photos ({(msg.relatedPhotos || []).length})
+                        </span>
+                      </div>
+                      <span className="text-[10px] font-bold text-emerald-400 bg-emerald-500/10 border border-emerald-500/30 px-2 py-0.5 rounded-full">
+                        High-Res Food Visuals
+                      </span>
+                    </div>
+
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+                      {(msg.relatedPhotos || []).map((photo, pIdx) => (
+                        <div
+                          key={photo.id || pIdx}
+                          onClick={() => setSelectedPhotoModal(photo)}
+                          className="group relative rounded-xl bg-slate-950 border border-slate-800 overflow-hidden shadow-sm hover:border-emerald-500/50 cursor-pointer transition-all aspect-video sm:aspect-square"
+                        >
+                          <img
+                            src={photo.url}
+                            alt={photo.title || 'Food photo'}
+                            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                            loading="lazy"
+                          />
+                          <div className="absolute inset-0 bg-gradient-to-t from-slate-950/90 via-slate-950/20 to-transparent opacity-90 group-hover:opacity-100 transition-opacity p-2 flex flex-col justify-end">
+                            <p className="text-[11px] font-bold text-white leading-tight truncate">
+                              {photo.title}
+                            </p>
+                            <span className="text-[9px] text-emerald-400 font-semibold flex items-center gap-1 mt-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                              <ZoomIn className="w-2.5 h-2.5" /> Enlarge Photo
+                            </span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* 🎥 Related Recipe & Cooking Videos */}
+                {msg.sender === 'ai' && (msg.relevantVideos || []).length > 0 && (
                   <div className="p-4 rounded-2xl bg-slate-900/90 border border-emerald-500/30 space-y-3 animate-in fade-in duration-300">
                     <div className="flex items-center justify-between border-b border-slate-800/80 pb-2.5">
                       <div className="flex items-center gap-2">
                         <Video className="w-4 h-4 text-emerald-400" />
                         <span className="text-xs font-bold text-white font-heading">
-                          🎥 Attached Relevant Nutrition & Cooking Videos ({msg.relevantVideos.length})
+                          🎥 Related Recipe & Cooking Videos ({(msg.relevantVideos || []).length})
                         </span>
                       </div>
                       <span className="text-[10px] font-bold text-emerald-400 bg-emerald-500/10 border border-emerald-500/30 px-2 py-0.5 rounded-full">
-                        AI Recommended Clips
+                        AI Recipe Tutorials
                       </span>
                     </div>
 
@@ -1268,7 +1315,7 @@ export default function IngredientScannerPage() {
                             onClick={() => setSelectedVideoModal(vid)}
                             className="mt-2 w-full py-1.5 rounded-lg bg-emerald-500/15 hover:bg-emerald-500 text-emerald-300 hover:text-slate-950 text-[11px] font-bold flex items-center justify-center gap-1 transition-all border border-emerald-500/30 cursor-pointer"
                           >
-                            <Play className="w-3 h-3" /> Watch Video
+                            <Play className="w-3 h-3" /> Watch Video Tutorial
                           </button>
                         </div>
                       ))}
@@ -1644,6 +1691,48 @@ export default function IngredientScannerPage() {
               >
                 <Lock className="w-4 h-4" />
                 <span>Confirm & Lock Dish Name</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Photo Lightbox Preview Modal */}
+      {selectedPhotoModal && (
+        <div className="fixed inset-0 z-50 bg-black/90 backdrop-blur-md flex items-center justify-center p-4 animate-in fade-in duration-200">
+          <div className="relative max-w-3xl w-full bg-slate-900 border border-emerald-500/40 rounded-3xl overflow-hidden shadow-2xl space-y-0">
+            <div className="p-4 border-b border-slate-800 flex items-center justify-between">
+              <div>
+                <h3 className="text-sm font-bold text-white flex items-center gap-2 font-heading">
+                  <Camera className="w-4 h-4 text-emerald-400" /> {selectedPhotoModal.title || 'Food Photo'}
+                </h3>
+                <p className="text-xs text-slate-400 mt-0.5">{selectedPhotoModal.caption || 'High-definition dish visual'}</p>
+              </div>
+              <button
+                onClick={() => setSelectedPhotoModal(null)}
+                className="p-2 rounded-xl bg-slate-800 text-slate-400 hover:text-white transition-all border border-slate-700"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="relative aspect-video sm:aspect-[16/9] w-full bg-black overflow-hidden flex items-center justify-center">
+              <img
+                src={selectedPhotoModal.url}
+                alt={selectedPhotoModal.title}
+                className="w-full h-full object-contain"
+              />
+            </div>
+
+            <div className="p-4 bg-slate-950/90 flex items-center justify-between text-xs border-t border-slate-800">
+              <span className="text-slate-400 flex items-center gap-1">
+                <Sparkles className="w-3.5 h-3.5 text-emerald-400" /> FitGen AI High-Res Food Gallery
+              </span>
+              <button
+                onClick={() => setSelectedPhotoModal(null)}
+                className="px-4 py-1.5 rounded-xl bg-emerald-500 text-slate-950 font-bold hover:bg-emerald-400 transition-all shadow-md"
+              >
+                Close Lightbox
               </button>
             </div>
           </div>

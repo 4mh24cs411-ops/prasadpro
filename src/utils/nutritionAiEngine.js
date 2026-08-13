@@ -1,6 +1,7 @@
 // src/utils/nutritionAiEngine.js
 // Advanced AI Nutrition & Ingredient Breakdown Engine
 import { getUniqueFoodImage } from '../data/nutritionVideosData';
+import { getRelatedPhotos } from '../services/mediaSearchService';
 
 // Food items dictionary with accurate macro & protein densities
 const PROTEIN_DENSITY_MAP = {
@@ -1412,6 +1413,7 @@ export function processConversationalChatbotQuery(rawUserQuery, conversationHist
       text: `👋 Ask FitGen AI for any dish (e.g. 'Samosa', 'Chicken Tikka', 'Paneer Butter Masala', 'Fruit Bowl') or list your kitchen ingredients!`,
       dishAnalysis: null,
       ingredientRecommendations: null,
+      relatedPhotos: getRelatedPhotos('paneer'),
       relevantVideos: []
     };
   }
@@ -1433,6 +1435,7 @@ What would you like to ask me today?
 3. 💬 **Fitness & Protein Q&A**: Ask *"Is banana good before workout?"* or *"How many calories are in an egg?"*`,
       dishAnalysis: null,
       ingredientRecommendations: null,
+      relatedPhotos: getRelatedPhotos('vegetables'),
       relevantVideos: []
     };
   }
@@ -1498,6 +1501,7 @@ What would you like to ask me today?
         text: text,
         dishAnalysis: null,
         ingredientRecommendations: recs,
+        relatedPhotos: getRelatedPhotos(activeSubject),
         relevantVideos: getVideosForIngredients(activeSubject)
       };
     }
@@ -1523,6 +1527,7 @@ What would you like to ask me today?
         text: text,
         dishAnalysis: null,
         ingredientRecommendations: recs,
+        relatedPhotos: getRelatedPhotos(activeSubject),
         relevantVideos: getVideosForIngredients(activeSubject)
       };
     }
@@ -1546,6 +1551,7 @@ What would you like to ask me today?
         text: text,
         dishAnalysis: null,
         ingredientRecommendations: recs,
+        relatedPhotos: getRelatedPhotos(activeSubject),
         relevantVideos: getVideosForIngredients(activeSubject)
       };
     }
@@ -1564,6 +1570,7 @@ What would you like to ask me today?
         text: text,
         dishAnalysis: null,
         ingredientRecommendations: recs,
+        relatedPhotos: getRelatedPhotos(activeSubject),
         relevantVideos: getVideosForIngredients(activeSubject)
       };
     }
@@ -1581,6 +1588,7 @@ What would you like to ask me today?
 💡 **FitGen Tip**: Egg whites provide 100% bioavailable protein with zero fat, making them ideal for fat loss & muscle building!`,
       dishAnalysis: null,
       ingredientRecommendations: null,
+      relatedPhotos: getRelatedPhotos('egg'),
       relevantVideos: getVideosForIngredients('egg')
     };
   }
@@ -1597,6 +1605,7 @@ What would you like to ask me today?
 💡 **FitGen Pre-Workout Tip**: Pair 1 banana with 1 tbsp almond butter or 1 scoop whey protein for sustained intra-workout stamina!`,
       dishAnalysis: null,
       ingredientRecommendations: null,
+      relatedPhotos: getRelatedPhotos('banana'),
       relevantVideos: getVideosForIngredients('banana')
     };
   }
@@ -1610,6 +1619,7 @@ What would you like to ask me today?
       text: `🔄 **Got your feedback, ${userName}!** Here is a fresh alternative selection of 100% **${dietary}** recipes tailored for your **${goal}** target:`,
       dishAnalysis: null,
       ingredientRecommendations: altRecommendations,
+      relatedPhotos: getRelatedPhotos(seedIngs),
       relevantVideos: getVideosForIngredients('Paneer')
     };
   }
@@ -1641,6 +1651,7 @@ What would you like to ask me today?
 Here is your complete step-by-step preparation guide and macro breakdown:`,
       dishAnalysis: dishAnalysis,
       ingredientRecommendations: null,
+      relatedPhotos: getRelatedPhotos(query),
       relevantVideos: getVideosForIngredients(query)
     };
   }
@@ -1671,6 +1682,7 @@ Here is your complete step-by-step preparation guide and macro breakdown:`,
       text: responseText,
       dishAnalysis: null,
       ingredientRecommendations: goalRecs,
+      relatedPhotos: getRelatedPhotos(query),
       relevantVideos: getVideosForIngredients(seedIngs)
     };
   }
@@ -1683,6 +1695,7 @@ Here is your complete step-by-step preparation guide and macro breakdown:`,
     text: formattedText,
     dishAnalysis: null,
     ingredientRecommendations: recs,
+    relatedPhotos: getRelatedPhotos(query),
     relevantVideos: getVideosForIngredients(query)
   };
 }

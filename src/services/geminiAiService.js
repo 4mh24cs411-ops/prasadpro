@@ -5,6 +5,7 @@
 
 import { processConversationalChatbotQuery } from '../utils/nutritionAiEngine';
 import { analyzeImageFile } from './imageRecognition';
+import { getRelatedPhotos } from './mediaSearchService';
 
 const GEMINI_MODEL = 'gemini-1.5-flash';
 
@@ -70,6 +71,7 @@ export async function queryDualAiModel({ userPrompt, attachedFile, conversationH
       text: localRes.text,
       dishAnalysis: localRes.dishAnalysis,
       ingredientRecommendations: localRes.ingredientRecommendations,
+      relatedPhotos: localRes.relatedPhotos || getRelatedPhotos(querySubject),
       relevantVideos: localRes.relevantVideos || []
     };
   }
@@ -147,6 +149,7 @@ Provide a warm, detailed, accurate response. If ingredients or dishes are asked,
       text: finalResponseText,
       dishAnalysis: localFallback.dishAnalysis,
       ingredientRecommendations: localFallback.ingredientRecommendations,
+      relatedPhotos: localFallback.relatedPhotos || getRelatedPhotos(userPrompt),
       relevantVideos: localFallback.relevantVideos || []
     };
   } catch (err) {
@@ -163,6 +166,7 @@ Provide a warm, detailed, accurate response. If ingredients or dishes are asked,
       text: `${notice}${localRes.text}`,
       dishAnalysis: localRes.dishAnalysis,
       ingredientRecommendations: localRes.ingredientRecommendations,
+      relatedPhotos: localRes.relatedPhotos || getRelatedPhotos(userPrompt),
       relevantVideos: localRes.relevantVideos || []
     };
   }
