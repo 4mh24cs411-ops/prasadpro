@@ -1840,6 +1840,7 @@ function formatIngredientResponseText(rawIngredientsText, recommendations = [], 
   const goal = userProfile?.goal || 'Muscle Gain';
   const dietary = userProfile?.dietary || 'Vegetarian';
   const nation = userProfile?.nation || 'India 🇮🇳';
+  const dailyProteinTarget = userProfile?.dailyProteinGoal || 130;
 
   const tokens = rawIngredientsText.split(/[\n,;+&.\/\\:]+/).map(t => t.trim()).filter(Boolean);
   const formattedIngs = tokens
@@ -1848,42 +1849,54 @@ function formatIngredientResponseText(rawIngredientsText, recommendations = [], 
     .map(t => t.charAt(0).toUpperCase() + t.slice(1))
     .join(', ');
 
-  let text = `🥗 **Available Ingredients Recognized**: **${formattedIngs || 'Tomato, Onion, Garlic'}**\n\n`;
-  text += `Based on your ingredients and active **${goal}** target (**${dietary}** | **${nation}**), here are **3 Suitable Meals** you can make right now:\n\n`;
+  // Calculate total base raw nutrition of entered ingredients
+  let baseTotalProtein = 0;
+  let baseTotalCalories = 0;
+
+  if (recommendations && recommendations.length > 0 && recommendations[0].availableIngredientsUsed) {
+    baseTotalProtein = Math.round(recommendations[0].availableIngredientsUsed.reduce((acc, item) => acc + (item.protein || 0), 0) * 10) / 10;
+    baseTotalCalories = Math.round(recommendations[0].availableIngredientsUsed.reduce((acc, item) => acc + (item.calories || 0), 0));
+  }
+
+  let text = `🥗 **Recognized Available Ingredients**: **${formattedIngs || 'Tomato, Cabbage, Onion, Carrot, Beans'}**\n\n`;
+  text += `📊 **Base Ingredient Raw Profile**: **~${baseTotalProtein}g Protein** | **~${baseTotalCalories} kcal** (High-fiber micronutrient density)\n\n`;
+  text += `Calibrated for your **${goal}** fitness target (**${dietary}** preference | **${nation}**):\n\n`;
 
   (recommendations || []).slice(0, 3).forEach((rec, idx) => {
     const icons = ['🍲', '🥘', '🍚', '🥗'];
     const icon = icons[idx % icons.length];
+    const recProtein = rec.macros?.protein || baseTotalProtein || 18;
+    const recCalories = rec.macros?.calories || baseTotalCalories || 280;
+    const percentTarget = Math.min(100, Math.round((recProtein / dailyProteinTarget) * 100));
+
     text += `---\n\n`;
     text += `### ${idx + 1}. ${icon} **${rec.dishName}**\n`;
-    text += `**Why it matches**: Uses your **${formattedIngs}** efficiently.\n\n`;
+    text += `• ⚡ **Protein Yield**: **${recProtein}g Protein** (${percentTarget}% of your ${dailyProteinTarget}g daily target)\n`;
+    text += `• 🔥 **Caloric Content**: **~${recCalories} kcal** | 🍞 Carbs: ~${rec.macros?.carbs || 28}g | 🧈 Fat: ~${rec.macros?.fat || 6}g | 🥬 Fiber: ~${rec.macros?.fiber || 8}g\n\n`;
     
-    text += `**Ingredients Used**:\n`;
+    text += `**Ingredients & Individual Protein Breakdown**:\n`;
     (rec.availableIngredientsUsed || []).forEach(ing => {
-      text += `• ${ing.icon || '🥗'} **${ing.name}**: ${ing.amount}\n`;
+      text += `• ${ing.icon || '🥗'} **${ing.name}** (${ing.amount || '1 portion'}): **${ing.protein ?? 0}g Protein** | ${ing.calories ?? 0} kcal\n`;
     });
     if (rec.optionalIngredients && rec.optionalIngredients.length > 0) {
-      text += `• *Optional/Missing Pantry Staples*: ${rec.optionalIngredients.map(o => `${o.name} (${o.amount})`).join(', ')}\n`;
+      text += `• 🧂 *Optional Pantry Staples*: ${rec.optionalIngredients.map(o => `${o.name} (${o.amount})`).join(', ')}\n`;
     }
     text += `\n`;
 
-    text += `**Preparation Steps**:\n`;
+    text += `**Step-by-Step Preparation Guide**:\n`;
     (rec.instructions || []).forEach((step, sIdx) => {
       text += `${sIdx + 1}. **${step.title}**: ${step.description}\n`;
     });
     text += `\n`;
 
-    text += `**Estimated Nutrition** *(Approximate values per serving)*:\n`;
-    text += `• **Calories**: ~${rec.macros?.calories || 280} kcal\n`;
-    text += `• **Protein**: ~${rec.macros?.protein || 18} g\n`;
-    text += `• **Carbohydrates**: ~${rec.macros?.carbs || 32} g\n`;
-    text += `• **Fat**: ~${rec.macros?.fat || 7} g\n`;
-    text += `• **Fiber**: ~${rec.macros?.fiber || 8} g\n`;
-    text += `• **Serving Size**: ${rec.servingSize || '1 bowl (300g)'}\n`;
-    text += `• **Fitness Suitability**: ${rec.fitnessGoalReason || 'High micronutrient density supporting lean body composition.'}\n\n`;
+    text += `🎯 **Fitness Suitability**: ${rec.fitnessGoalReason || 'Rich in vitamins and minerals supporting active recovery.'}\n\n`;
   });
 
-  text += `---\n\n💡 **FitGen Tip**: To reach your daily protein goal (**${userProfile?.dailyProteinGoal || 130}g**), add paneer, tofu, eggs, soya, or chicken breast as an optional protein booster!`;
+  const boosterSuggestion = dietary === 'Non-Vegetarian' 
+    ? 'Lean Chicken Breast (+46g Protein)' 
+    : (dietary === 'Eggetarian' ? 'Farm Egg Whites (+22g Protein)' : 'Fresh Paneer / Tofu / Soya Chunks (+28g Protein)');
+
+  text += `---\n\n💡 **FitGen High-Protein Booster Tip**: To hit over **40g Protein** per meal for ${goal}, add **150g ${boosterSuggestion}**!`;
 
   return text;
 }
