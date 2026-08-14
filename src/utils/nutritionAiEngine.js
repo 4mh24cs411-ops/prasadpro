@@ -748,6 +748,14 @@ export function getDishRecommendationsFromAvailableIngredients(rawIngredientsTex
   const hasPaneer = primaryKeys.some(k => k.includes('paneer'));
   const hasChicken = primaryKeys.some(k => k.includes('chicken'));
   const hasEgg = primaryKeys.some(k => k.includes('egg'));
+  const hasRice = primaryKeys.some(k => k.includes('rice'));
+  const hasDal = primaryKeys.some(k => k.includes('dal') || k.includes('lentil'));
+  const hasChickpeas = primaryKeys.some(k => k.includes('chickpea') || k.includes('chana'));
+  const hasSoya = primaryKeys.some(k => k.includes('soya'));
+  const hasTofu = primaryKeys.some(k => k.includes('tofu'));
+  const hasSpinach = primaryKeys.some(k => k.includes('spinach') || k.includes('palak'));
+  const hasOats = primaryKeys.some(k => k.includes('oats'));
+  const hasBanana = primaryKeys.some(k => k.includes('banana'));
 
   const userTypedWords = userMatchedItems.map(i => i.userText ? i.userText.charAt(0).toUpperCase() + i.userText.slice(1) : i.name.split(' ')[0]);
   const ingSummaryStr = userTypedWords.slice(0, 4).join(', ');
@@ -755,108 +763,309 @@ export function getDishRecommendationsFromAvailableIngredients(rawIngredientsTex
 
   const recommendations = [];
 
-  // Authentic Regional Indian & Global Dishes (STRICTLY using user's typed ingredients)
-  recommendations.push({
-    id: `rec-dish-1-${Date.now()}-1`,
-    dishName: `🍲 Sautéed ${ingSummaryStr} Stir-Fry / Sabzi`,
-    cuisine: 'Desi Fitness Stir-Fry',
-    dietary: (hasChicken && userDietary === 'Non-Vegetarian') ? 'Non-Vegetarian' : (hasEgg && userDietary === 'Eggetarian') ? 'Eggetarian' : 'Vegetarian',
-    image: getUniqueFoodImage(ingSummaryStr, rawIngredientsText),
-    matchScore: { usedCount: userMatchedItems.length, totalAvailable: uniqueTokens.length, percentage: 100 },
-    availableIngredientsUsed: userMatchedItems,
-    optionalIngredients: [
-      { name: 'Cold-Pressed Cooking Oil / Ghee', icon: '🫒', amount: '1 tsp', note: 'Cooking Medium' },
-      { name: 'Himalayan Pink Salt & Black Pepper', icon: '🧂', amount: '1 pinch', note: 'Seasoning' }
-    ],
-    prepTime: '8 mins',
-    cookTime: '10 mins',
-    servingSize: '1 bowl (300g)',
-    macros: { calories: totalBaseCal + 40, protein: totalBaseProt, carbs: 24, fat: 5, fiber: 7.5 },
-    highProteinBooster: `💪 100% Strict Match: Made exclusively from your ${ingSummaryStr}!`,
-    fitnessGoalReason: `Preserves thermal vitamins and fiber for your ${goal} plan.`,
-    fitgenGoalVersion: `Goal tuned for ${goal}`,
-    instructions: [
-      { step: 1, title: 'Clean & Chop', description: `Clean and chop ${allIngsStr}.`, timerSeconds: 240 },
-      { step: 2, title: 'Temper Spices', description: 'Heat 1 tsp oil in skillet. Add cumin seeds and chilis.', timerSeconds: 180 },
-      { step: 3, title: 'Sauté & Steam', description: `Add ${allIngsStr}, cover and cook on medium-low for 8 mins.`, timerSeconds: 480 }
-    ]
-  });
+  // Generate 4 Dynamic, Authentic, Non-Repetitive Dishes based on exact ingredient combinations!
+  if (hasEgg && hasRice) {
+    recommendations.push({
+      id: `rec-dish-1-${Date.now()}-1`,
+      dishName: `🍳 High-Protein Egg Fried Rice with Crisp Veggies`,
+      cuisine: 'Indo-Chinese Fitness',
+      dietary: 'Eggetarian',
+      image: 'https://images.unsplash.com/photo-1603133872878-684f208fb84b?auto=format&fit=crop&w=800&q=80',
+      matchScore: { usedCount: userMatchedItems.length, totalAvailable: uniqueTokens.length, percentage: 100 },
+      availableIngredientsUsed: userMatchedItems,
+      optionalIngredients: [
+        { name: 'Soy Sauce & Garlic', icon: '🧄', amount: '1 tsp', note: 'Seasoning' },
+        { name: 'Cold-Pressed Oil', icon: '🫒', amount: '1 tsp', note: 'Cooking Medium' }
+      ],
+      prepTime: '10 mins',
+      cookTime: '12 mins',
+      servingSize: '1 bowl (350g)',
+      macros: { calories: Math.round(totalBaseCal + 50), protein: Math.round(totalBaseProt + 4), carbs: 48, fat: 12, fiber: 6.5 },
+      highProteinBooster: `💪 100% FitGen Match: Pan-fried eggs scrambled with ${ingSummaryStr} over rice!`,
+      fitnessGoalReason: `Perfect balance of fast-acting carbs & bioavailable protein for ${goal}.`,
+      fitgenGoalVersion: `Goal tuned for ${goal}`,
+      instructions: [
+        { step: 1, title: 'Prep Veggies & Eggs', description: `Dice ${allIngsStr}. Whisk eggs in a bowl with pink salt and pepper.`, timerSeconds: 240 },
+        { step: 2, title: 'Sauté Veggies & Scramble', description: 'Heat 1 tsp oil in wok. Sauté veggies 3 mins, push aside, pour eggs and scramble until fluffy.', timerSeconds: 300 },
+        { step: 3, title: 'Fold Rice & Serve', description: 'Add cooked rice, soy sauce, toss on high heat for 2 mins, and serve hot!', timerSeconds: 120 }
+      ]
+    });
 
-  recommendations.push({
-    id: `rec-dish-2-${Date.now()}-2`,
-    dishName: `🥘 Desi Spiced ${ingSummaryStr} Curry / Masala`,
-    cuisine: 'Indian Masala Curry',
-    dietary: (hasChicken && userDietary === 'Non-Vegetarian') ? 'Non-Vegetarian' : 'Vegetarian',
-    image: 'https://images.unsplash.com/photo-1631452180519-c014fe946bc7?auto=format&fit=crop&w=800&q=80',
-    matchScore: { usedCount: userMatchedItems.length, totalAvailable: uniqueTokens.length, percentage: 100 },
-    availableIngredientsUsed: userMatchedItems,
-    optionalIngredients: [
-      { name: 'Garam Masala & Turmeric', icon: '🌶️', amount: '1/2 tsp', note: 'Spices' },
-      { name: 'Fresh Cilantro', icon: '🌿', amount: '2 tbsp', note: 'Garnish' }
-    ],
-    prepTime: '10 mins',
-    cookTime: '12 mins',
-    servingSize: '1.5 cups (310g)',
-    macros: { calories: totalBaseCal + 50, protein: totalBaseProt, carbs: 26, fat: 6, fiber: 7.0 },
-    highProteinBooster: `💪 Rich Flavor: Simmered curry using strictly your ${ingSummaryStr}!`,
-    fitnessGoalReason: `Anti-inflammatory turmeric and cumin support active digestion (${goal}).`,
-    fitgenGoalVersion: `Goal tuned for ${goal}`,
-    instructions: [
-      { step: 1, title: 'Prepare Gravy Base', description: 'Sauté onions and tomatoes until soft and fragrant.', timerSeconds: 240 },
-      { step: 2, title: 'Simmer Veggies', description: `Add ${allIngsStr} with spices and 1/2 cup water. Simmer 8 mins.`, timerSeconds: 480 },
-      { step: 3, title: 'Garnish & Serve', description: 'Top with fresh cilantro and serve warm!', timerSeconds: 60 }
-    ]
-  });
+    recommendations.push({
+      id: `rec-dish-2-${Date.now()}-2`,
+      dishName: `🥘 Desi Spiced Egg Bhurji & Veggie Rice`,
+      cuisine: 'Indian Masala',
+      dietary: 'Eggetarian',
+      image: 'https://images.unsplash.com/photo-1525351484163-7529414344d8?auto=format&fit=crop&w=800&q=80',
+      matchScore: { usedCount: userMatchedItems.length, totalAvailable: uniqueTokens.length, percentage: 100 },
+      availableIngredientsUsed: userMatchedItems,
+      optionalIngredients: [
+        { name: 'Garam Masala & Turmeric', icon: '🌶️', amount: '1/2 tsp', note: 'Spices' },
+        { name: 'Fresh Cilantro', icon: '🌿', amount: '2 tbsp', note: 'Garnish' }
+      ],
+      prepTime: '8 mins',
+      cookTime: '10 mins',
+      servingSize: '1.5 cups (320g)',
+      macros: { calories: Math.round(totalBaseCal + 40), protein: Math.round(totalBaseProt + 2), carbs: 42, fat: 10, fiber: 5.8 },
+      highProteinBooster: `💪 High-Protein Scramble: Spiced egg bhurji folded with ${ingSummaryStr}.`,
+      fitnessGoalReason: `Anti-inflammatory spices support digestion and muscle recovery (${goal}).`,
+      fitgenGoalVersion: `Goal tuned for ${goal}`,
+      instructions: [
+        { step: 1, title: 'Sauté Masala Base', description: 'Heat oil, add onions, chilis, tomatoes, and spices. Sauté 3 mins.', timerSeconds: 180 },
+        { step: 2, title: 'Scramble Eggs & Add Veggies', description: `Add ${allIngsStr} and eggs. Scramble until set.`, timerSeconds: 300 },
+        { step: 3, title: 'Combine & Garnish', description: 'Serve over rice garnished with fresh cilantro.', timerSeconds: 60 }
+      ]
+    });
 
-  recommendations.push({
-    id: `rec-dish-3-${Date.now()}-3`,
-    dishName: `🥗 Fresh ${ingSummaryStr} Micronutrient Protein Salad Bowl`,
-    cuisine: 'Garden Fresh Fitness',
-    dietary: 'Vegetarian',
-    image: 'https://images.unsplash.com/photo-1512621776951-a57141f2eefd?auto=format&fit=crop&w=800&q=80',
-    matchScore: { usedCount: userMatchedItems.length, totalAvailable: uniqueTokens.length, percentage: 100 },
-    availableIngredientsUsed: userMatchedItems,
-    optionalIngredients: [
-      { name: 'Lemon Juice & Black Pepper', icon: '🍋', amount: '1 tbsp', note: 'Dressing' },
-      { name: 'Roasted Cumin Powder', icon: '🧂', amount: '1/2 tsp', note: 'Seasoning' }
-    ],
-    prepTime: '6 mins',
-    cookTime: '0 mins',
-    servingSize: '1 large salad bowl (280g)',
-    macros: { calories: totalBaseCal, protein: totalBaseProt, carbs: 22, fat: 2, fiber: 8.0 },
-    highProteinBooster: `💪 Raw Crunchy Bowl: Uncooked crisp ${ingSummaryStr} retaining 100% enzymes!`,
-    fitnessGoalReason: `Ultra-high satiety and zero cooking oil ideal for ${goal}.`,
-    fitgenGoalVersion: `Goal tuned for ${goal}`,
-    instructions: [
-      { step: 1, title: 'Shred & Slice', description: `Finely shred and dice ${allIngsStr}.`, timerSeconds: 300 },
-      { step: 2, title: 'Dress & Toss', description: 'Toss with lemon juice, pink salt, and black pepper. Serve fresh!', timerSeconds: 60 }
-    ]
-  });
+    recommendations.push({
+      id: `rec-dish-3-${Date.now()}-3`,
+      dishName: `🍛 Masala Egg & Mixed Vegetable Pulao`,
+      cuisine: 'Desi Pulao',
+      dietary: 'Eggetarian',
+      image: 'https://images.unsplash.com/photo-1563379091339-03b21ab4a4f8?auto=format&fit=crop&w=800&q=80',
+      matchScore: { usedCount: userMatchedItems.length, totalAvailable: uniqueTokens.length, percentage: 100 },
+      availableIngredientsUsed: userMatchedItems,
+      optionalIngredients: [
+        { name: 'Cumin & Whole Spices', icon: '🧂', amount: '1 tsp', note: 'Aromatics' }
+      ],
+      prepTime: '10 mins',
+      cookTime: '15 mins',
+      servingSize: '1 large bowl (340g)',
+      macros: { calories: Math.round(totalBaseCal + 60), protein: Math.round(totalBaseProt), carbs: 50, fat: 9, fiber: 6.0 },
+      highProteinBooster: `💪 Slow-Simmered Pulao: Fragrant rice simmered with boiled eggs and ${ingSummaryStr}.`,
+      fitnessGoalReason: `Sustained complex carb release for energy during ${goal}.`,
+      fitgenGoalVersion: `Goal tuned for ${goal}`,
+      instructions: [
+        { step: 1, title: 'Temper Aromatics', description: 'Sauté cumin, chilis, and onions in 1 tsp oil.', timerSeconds: 180 },
+        { step: 2, title: 'Simmer Rice & Veggies', description: `Add ${allIngsStr}, rice, and 1.5 cups water. Simmer covered for 10 mins.`, timerSeconds: 600 },
+        { step: 3, title: 'Fold Eggs & Serve', description: 'Top with sliced boiled eggs and serve warm!', timerSeconds: 120 }
+      ]
+    });
 
-  recommendations.push({
-    id: `rec-dish-4-${Date.now()}-4`,
-    dishName: `🍵 Warm ${ingSummaryStr} Detox Shorba / Soup`,
-    cuisine: 'Desi Wellness Soup',
-    dietary: 'Vegan',
-    image: 'https://images.unsplash.com/photo-1547592166-23ac45744acd?auto=format&fit=crop&w=800&q=80',
-    matchScore: { usedCount: userMatchedItems.length, totalAvailable: uniqueTokens.length, percentage: 100 },
-    availableIngredientsUsed: userMatchedItems,
-    optionalIngredients: [
-      { name: 'Roasted Cumin & Black Pepper', icon: '🧂', amount: '1/2 tsp', note: 'Digestion' },
-      { name: 'Lemon Juice', icon: '🍋', amount: '1 tbsp', note: 'Finish' }
-    ],
-    prepTime: '5 mins',
-    cookTime: '10 mins',
-    servingSize: '2 bowls (360g)',
-    macros: { calories: Math.max(60, totalBaseCal - 15), protein: totalBaseProt, carbs: 16, fat: 1, fiber: 7.0 },
-    highProteinBooster: `💪 Hydrating Detox: Warm soup extracted exclusively from your ${ingSummaryStr}!`,
-    fitnessGoalReason: `Hydrating low-calorie broth that flushes water weight for ${goal}.`,
-    fitgenGoalVersion: `Goal tuned for ${goal}`,
-    instructions: [
-      { step: 1, title: 'Boil Ingredients', description: `Boil ${allIngsStr} in 2.5 cups water with cumin and salt.`, timerSeconds: 480 },
-      { step: 2, title: 'Simmer & Serve', description: 'Simmer for 5 mins, squeeze lemon juice, and serve warm.', timerSeconds: 180 }
-    ]
-  });
+    recommendations.push({
+      id: `rec-dish-4-${Date.now()}-4`,
+      dishName: `🥗 Boiled Egg & Spring Vegetable Protein Bowl`,
+      cuisine: 'Clean Fitness Bowl',
+      dietary: 'Eggetarian',
+      image: 'https://images.unsplash.com/photo-1512621776951-a57141f2eefd?auto=format&fit=crop&w=800&q=80',
+      matchScore: { usedCount: userMatchedItems.length, totalAvailable: uniqueTokens.length, percentage: 100 },
+      availableIngredientsUsed: userMatchedItems,
+      optionalIngredients: [
+        { name: 'Lemon Juice & Black Pepper', icon: '🍋', amount: '1 tbsp', note: 'Dressing' }
+      ],
+      prepTime: '8 mins',
+      cookTime: '0 mins',
+      servingSize: '1 salad bowl (290g)',
+      macros: { calories: Math.max(180, totalBaseCal - 30), protein: totalBaseProt, carbs: 24, fat: 7, fiber: 7.0 },
+      highProteinBooster: `💪 Clean Satiety: Steamed/raw ${ingSummaryStr} topped with sliced farm eggs.`,
+      fitnessGoalReason: `Zero oil, ultra-high satiety ideal for ${goal}.`,
+      fitgenGoalVersion: `Goal tuned for ${goal}`,
+      instructions: [
+        { step: 1, title: 'Chop Veggies', description: `Slice ${allIngsStr} into bite-sized bowl pieces.`, timerSeconds: 240 },
+        { step: 2, title: 'Assemble & Dress', description: 'Top with sliced eggs, lemon juice, and black pepper. Enjoy!', timerSeconds: 60 }
+      ]
+    });
+  } else if (hasPaneer) {
+    recommendations.push({
+      id: `rec-dish-1-${Date.now()}-1`,
+      dishName: `🍲 FitGen Kadhai Paneer Tikka Masala`,
+      cuisine: 'Authentic Indian',
+      dietary: 'Vegetarian',
+      image: 'https://images.unsplash.com/photo-1631452180519-c014fe946bc7?auto=format&fit=crop&w=800&q=80',
+      matchScore: { usedCount: userMatchedItems.length, totalAvailable: uniqueTokens.length, percentage: 100 },
+      availableIngredientsUsed: userMatchedItems,
+      optionalIngredients: [
+        { name: 'Garam Masala & Turmeric', icon: '🌶️', amount: '1/2 tsp', note: 'Spices' }
+      ],
+      prepTime: '10 mins',
+      cookTime: '12 mins',
+      servingSize: '1.5 cups (320g)',
+      macros: { calories: totalBaseCal + 50, protein: Math.max(28, totalBaseProt), carbs: 22, fat: 14, fiber: 6.0 },
+      highProteinBooster: `💪 Rich Protein: Fresh cottage cheese cubes tossed with ${ingSummaryStr}.`,
+      fitnessGoalReason: `Slow-digesting casein protein supports overnight muscle recovery (${goal}).`,
+      fitgenGoalVersion: `Goal tuned for ${goal}`,
+      instructions: [
+        { step: 1, title: 'Sear Paneer', description: 'Pan-sear paneer cubes in 1 tsp oil for 2 mins until golden.', timerSeconds: 180 },
+        { step: 2, title: 'Prepare Masala Gravy', description: `Add ${allIngsStr} and spices. Simmer for 8 mins.`, timerSeconds: 480 },
+        { step: 3, title: 'Garnish', description: 'Garnish with fresh cilantro and serve warm!', timerSeconds: 60 }
+      ]
+    });
+
+    recommendations.push({
+      id: `rec-dish-2-${Date.now()}-2`,
+      dishName: `🍳 Paneer Bhurji & Sautéed Veggie Skillet`,
+      cuisine: 'Desi Fitness Skillet',
+      dietary: 'Vegetarian',
+      image: 'https://images.unsplash.com/photo-1565557623262-b51c2513a641?auto=format&fit=crop&w=800&q=80',
+      matchScore: { usedCount: userMatchedItems.length, totalAvailable: uniqueTokens.length, percentage: 100 },
+      availableIngredientsUsed: userMatchedItems,
+      optionalIngredients: [
+        { name: 'Green Chilis & Cumin', icon: '🌶️', amount: '1 tsp', note: 'Seasoning' }
+      ],
+      prepTime: '8 mins',
+      cookTime: '8 mins',
+      servingSize: '1 portion (280g)',
+      macros: { calories: totalBaseCal + 30, protein: Math.max(26, totalBaseProt), carbs: 18, fat: 12, fiber: 5.5 },
+      highProteinBooster: `💪 Crumbled Paneer Bhurji: Quick 8-minute protein scramble with ${ingSummaryStr}.`,
+      fitnessGoalReason: `Quick anabolic protein for muscle recovery.`,
+      fitgenGoalVersion: `Goal tuned for ${goal}`,
+      instructions: [
+        { step: 1, title: 'Chop & Crumble', description: `Dice ${allIngsStr} and crumble paneer.`, timerSeconds: 180 },
+        { step: 2, title: 'Sauté & Scramble', description: 'Heat 1 tsp oil, sauté veggies 4 mins, fold in paneer bhurji for 3 mins.', timerSeconds: 420 }
+      ]
+    });
+
+    recommendations.push({
+      id: `rec-dish-3-${Date.now()}-3`,
+      dishName: `🥗 Pan-Seared Paneer & Micronutrient Salad`,
+      cuisine: 'Clean Fitness',
+      dietary: 'Vegetarian',
+      image: 'https://images.unsplash.com/photo-1512621776951-a57141f2eefd?auto=format&fit=crop&w=800&q=80',
+      matchScore: { usedCount: userMatchedItems.length, totalAvailable: uniqueTokens.length, percentage: 100 },
+      availableIngredientsUsed: userMatchedItems,
+      optionalIngredients: [
+        { name: 'Lemon Juice', icon: '🍋', amount: '1 tbsp', note: 'Dressing' }
+      ],
+      prepTime: '6 mins',
+      cookTime: '4 mins',
+      servingSize: '1 bowl (270g)',
+      macros: { calories: totalBaseCal, protein: Math.max(25, totalBaseProt), carbs: 16, fat: 10, fiber: 7.0 },
+      highProteinBooster: `💪 Raw & Seared Balance: Crisp ${ingSummaryStr} with warm paneer cubes.`,
+      fitnessGoalReason: `High fiber & high satiety for ${goal}.`,
+      fitgenGoalVersion: `Goal tuned for ${goal}`,
+      instructions: [
+        { step: 1, title: 'Sear Paneer', description: 'Sear paneer cubes in dry non-stick skillet for 3 mins.', timerSeconds: 180 },
+        { step: 2, title: 'Toss Salad', description: `Toss with ${allIngsStr}, lemon juice, and pink salt. Serve fresh!`, timerSeconds: 60 }
+      ]
+    });
+
+    recommendations.push({
+      id: `rec-dish-4-${Date.now()}-4`,
+      dishName: `🍵 Warm Paneer & Vegetable Shorba / Soup`,
+      cuisine: 'Desi Wellness',
+      dietary: 'Vegetarian',
+      image: 'https://images.unsplash.com/photo-1547592166-23ac45744acd?auto=format&fit=crop&w=800&q=80',
+      matchScore: { usedCount: userMatchedItems.length, totalAvailable: uniqueTokens.length, percentage: 100 },
+      availableIngredientsUsed: userMatchedItems,
+      optionalIngredients: [
+        { name: 'Black Pepper & Cumin', icon: '🧂', amount: '1/2 tsp', note: 'Digestion' }
+      ],
+      prepTime: '5 mins',
+      cookTime: '10 mins',
+      servingSize: '2 bowls (350g)',
+      macros: { calories: totalBaseCal - 20, protein: Math.max(22, totalBaseProt), carbs: 15, fat: 8, fiber: 6.0 },
+      highProteinBooster: `💪 Hydrating Detox: Warm soup broth with cubed paneer and ${ingSummaryStr}.`,
+      fitnessGoalReason: `Hydrating broth that flushes water weight for ${goal}.`,
+      fitgenGoalVersion: `Goal tuned for ${goal}`,
+      instructions: [
+        { step: 1, title: 'Boil & Simmer', description: `Boil ${allIngsStr} in 2.5 cups water for 8 mins.`, timerSeconds: 480 },
+        { step: 2, title: 'Add Paneer & Serve', description: 'Add paneer cubes, squeeze lemon, and serve warm.', timerSeconds: 120 }
+      ]
+    });
+  } else {
+    // Default / Vegetables-Only / Custom Ingredients
+    recommendations.push({
+      id: `rec-dish-1-${Date.now()}-1`,
+      dishName: `🍲 Desi Mix ${ingSummaryStr} Sabzi / Stir-Fry`,
+      cuisine: 'Desi Fitness Stir-Fry',
+      dietary: (hasChicken && userDietary === 'Non-Vegetarian') ? 'Non-Vegetarian' : (hasEgg && userDietary === 'Eggetarian') ? 'Eggetarian' : 'Vegetarian',
+      image: getUniqueFoodImage(ingSummaryStr, rawIngredientsText),
+      matchScore: { usedCount: userMatchedItems.length, totalAvailable: uniqueTokens.length, percentage: 100 },
+      availableIngredientsUsed: userMatchedItems,
+      optionalIngredients: [
+        { name: 'Cold-Pressed Cooking Oil', icon: '🫒', amount: '1 tsp', note: 'Cooking Medium' },
+        { name: 'Himalayan Pink Salt & Black Pepper', icon: '🧂', amount: '1 pinch', note: 'Seasoning' }
+      ],
+      prepTime: '8 mins',
+      cookTime: '10 mins',
+      servingSize: '1 bowl (300g)',
+      macros: { calories: totalBaseCal + 40, protein: totalBaseProt, carbs: 24, fat: 5, fiber: 7.5 },
+      highProteinBooster: `💪 100% Strict Match: Made exclusively from your ${ingSummaryStr}!`,
+      fitnessGoalReason: `Preserves thermal vitamins and fiber for your ${goal} plan.`,
+      fitgenGoalVersion: `Goal tuned for ${goal}`,
+      instructions: [
+        { step: 1, title: 'Clean & Chop', description: `Clean and chop ${allIngsStr}.`, timerSeconds: 240 },
+        { step: 2, title: 'Temper Spices', description: 'Heat 1 tsp oil in skillet. Add cumin seeds and chilis.', timerSeconds: 180 },
+        { step: 3, title: 'Sauté & Steam', description: `Add ${allIngsStr}, cover and cook on medium-low for 8 mins.`, timerSeconds: 480 }
+      ]
+    });
+
+    recommendations.push({
+      id: `rec-dish-2-${Date.now()}-2`,
+      dishName: `🥘 Spiced ${ingSummaryStr} Masala Curry`,
+      cuisine: 'Indian Masala Curry',
+      dietary: (hasChicken && userDietary === 'Non-Vegetarian') ? 'Non-Vegetarian' : 'Vegetarian',
+      image: 'https://images.unsplash.com/photo-1546833999-b9f581a1996d?auto=format&fit=crop&w=800&q=80',
+      matchScore: { usedCount: userMatchedItems.length, totalAvailable: uniqueTokens.length, percentage: 100 },
+      availableIngredientsUsed: userMatchedItems,
+      optionalIngredients: [
+        { name: 'Garam Masala & Turmeric', icon: '🌶️', amount: '1/2 tsp', note: 'Spices' },
+        { name: 'Fresh Cilantro', icon: '🌿', amount: '2 tbsp', note: 'Garnish' }
+      ],
+      prepTime: '10 mins',
+      cookTime: '12 mins',
+      servingSize: '1.5 cups (310g)',
+      macros: { calories: totalBaseCal + 50, protein: totalBaseProt, carbs: 26, fat: 6, fiber: 7.0 },
+      highProteinBooster: `💪 Rich Flavor: Simmered curry using strictly your ${ingSummaryStr}!`,
+      fitnessGoalReason: `Anti-inflammatory turmeric and cumin support active digestion (${goal}).`,
+      fitgenGoalVersion: `Goal tuned for ${goal}`,
+      instructions: [
+        { step: 1, title: 'Prepare Gravy Base', description: 'Sauté onions and tomatoes until soft and fragrant.', timerSeconds: 240 },
+        { step: 2, title: 'Simmer Veggies', description: `Add ${allIngsStr} with spices and 1/2 cup water. Simmer 8 mins.`, timerSeconds: 480 },
+        { step: 3, title: 'Garnish & Serve', description: 'Top with fresh cilantro and serve warm!', timerSeconds: 60 }
+      ]
+    });
+
+    recommendations.push({
+      id: `rec-dish-3-${Date.now()}-3`,
+      dishName: `🥗 Fresh ${ingSummaryStr} Micronutrient Salad Bowl`,
+      cuisine: 'Garden Fresh Fitness',
+      dietary: 'Vegetarian',
+      image: 'https://images.unsplash.com/photo-1512621776951-a57141f2eefd?auto=format&fit=crop&w=800&q=80',
+      matchScore: { usedCount: userMatchedItems.length, totalAvailable: uniqueTokens.length, percentage: 100 },
+      availableIngredientsUsed: userMatchedItems,
+      optionalIngredients: [
+        { name: 'Lemon Juice & Black Pepper', icon: '🍋', amount: '1 tbsp', note: 'Dressing' },
+        { name: 'Roasted Cumin Powder', icon: '🧂', amount: '1/2 tsp', note: 'Seasoning' }
+      ],
+      prepTime: '6 mins',
+      cookTime: '0 mins',
+      servingSize: '1 large salad bowl (280g)',
+      macros: { calories: totalBaseCal, protein: totalBaseProt, carbs: 22, fat: 2, fiber: 8.0 },
+      highProteinBooster: `💪 Raw Crunchy Bowl: Uncooked crisp ${ingSummaryStr} retaining 100% enzymes!`,
+      fitnessGoalReason: `Ultra-high satiety and zero cooking oil ideal for ${goal}.`,
+      fitgenGoalVersion: `Goal tuned for ${goal}`,
+      instructions: [
+        { step: 1, title: 'Shred & Slice', description: `Finely shred and dice ${allIngsStr}.`, timerSeconds: 300 },
+        { step: 2, title: 'Dress & Toss', description: 'Toss with lemon juice, pink salt, and black pepper. Serve fresh!', timerSeconds: 60 }
+      ]
+    });
+
+    recommendations.push({
+      id: `rec-dish-4-${Date.now()}-4`,
+      dishName: `🍵 Warm ${ingSummaryStr} Detox Shorba / Soup`,
+      cuisine: 'Desi Wellness Soup',
+      dietary: 'Vegan',
+      image: 'https://images.unsplash.com/photo-1547592166-23ac45744acd?auto=format&fit=crop&w=800&q=80',
+      matchScore: { usedCount: userMatchedItems.length, totalAvailable: uniqueTokens.length, percentage: 100 },
+      availableIngredientsUsed: userMatchedItems,
+      optionalIngredients: [
+        { name: 'Roasted Cumin & Black Pepper', icon: '🧂', amount: '1/2 tsp', note: 'Digestion' },
+        { name: 'Lemon Juice', icon: '🍋', amount: '1 tbsp', note: 'Finish' }
+      ],
+      prepTime: '5 mins',
+      cookTime: '10 mins',
+      servingSize: '2 bowls (360g)',
+      macros: { calories: Math.max(60, totalBaseCal - 15), protein: totalBaseProt, carbs: 16, fat: 1, fiber: 7.0 },
+      highProteinBooster: `💪 Hydrating Detox: Warm soup extracted exclusively from your ${ingSummaryStr}!`,
+      fitnessGoalReason: `Hydrating low-calorie broth that flushes water weight for ${goal}.`,
+      fitgenGoalVersion: `Goal tuned for ${goal}`,
+      instructions: [
+        { step: 1, title: 'Boil Ingredients', description: `Boil ${allIngsStr} in 2.5 cups water with cumin and salt.`, timerSeconds: 480 },
+        { step: 2, title: 'Simmer & Serve', description: 'Simmer for 5 mins, squeeze lemon juice, and serve warm.', timerSeconds: 180 }
+      ]
+    });
+  }
   // Filter out any dishes that contain user's active allergies
   if (allergies.length > 0) {
     recommendations.forEach(dish => {

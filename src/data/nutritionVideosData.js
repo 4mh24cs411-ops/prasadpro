@@ -379,42 +379,31 @@ export function getVideosForIngredients(inputQuery) {
 
     const queryClean = inputQuery.toLowerCase().trim();
 
-    // Strict matching against curated video library with safe guards
+    // Check for explicit dish keyword matches
     const matched = (CURATED_NUTRITION_VIDEOS || []).filter(video => {
       if (!video) return false;
       const titleLower = (video.title || '').toLowerCase();
       const catLower = (video.category || '').toLowerCase();
-      const ingLower = Array.isArray(video.ingredients)
-        ? video.ingredients.map(i => (i || '').toLowerCase())
-        : [];
+      
+      // Match exact dish names
+      if (queryClean.includes('samosa') && titleLower.includes('samosa')) return true;
+      if (queryClean.includes('palak') && titleLower.includes('palak')) return true;
+      if (queryClean.includes('tikka') && titleLower.includes('tikka')) return true;
+      if ((queryClean.includes('6-pack') || queryClean.includes('abs')) && catLower.includes('6-pack')) return true;
 
-      return (
-        (titleLower && titleLower.includes(queryClean)) ||
-        ingLower.some(ing => ing && (queryClean.includes(ing) || ing.includes(queryClean)))
-      );
+      return titleLower.includes(queryClean);
     });
 
-    // Return 3-4 videos for rich multi-video experience!
     if (matched.length >= 3) {
       return matched.slice(0, 4);
     }
 
-    if (matched.length === 2) {
-      const dynamicCard = createDynamicIngredientVideoCard(inputQuery, 3);
-      return [...matched, dynamicCard];
-    }
-
-    if (matched.length === 1) {
-      const dynamicCard1 = createDynamicIngredientVideoCard(inputQuery, 2);
-      const dynamicCard2 = createDynamicIngredientVideoCard(inputQuery, 3);
-      return [matched[0], dynamicCard1, dynamicCard2];
-    }
-
-    // Create 3 100% relevant dynamic video cards tailored for the exact query!
+    // Generate 3 100% relevant dynamic video cards tailored for the exact ingredient prompt!
     const card1 = createDynamicIngredientVideoCard(inputQuery, 1);
     const card2 = createDynamicIngredientVideoCard(inputQuery, 2);
     const card3 = createDynamicIngredientVideoCard(inputQuery, 3);
-    return [card1, card2, card3];
+    
+    return [...matched, card1, card2, card3].slice(0, 4);
   } catch (err) {
     console.warn("getVideosForIngredients safe fallback:", err);
     return (CURATED_NUTRITION_VIDEOS || []).slice(0, 4);
@@ -457,7 +446,7 @@ function createDynamicIngredientVideoCard(ingredientsText, variant = 1) {
   const searchEnc = encodeURIComponent(`${ingredientsText} authentic recipe nutrition macros`);
 
   return {
-    id: `dyn-vid-${variant}-${Date.now()}`,
+    id: `dyn-vid-${variant}-${Date.now()}-${Math.random().toString(36).substring(2, 5)}`,
     title: titleText,
     channel: "FitGen AI Nutrition Science",
     channelVerified: true,
