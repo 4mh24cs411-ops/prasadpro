@@ -1788,13 +1788,16 @@ Here are optimal ingredient swaps tailored for your **${dietary}** preference:
     }
 
     if (lowerQuery.includes('high protein')) {
-      const recs = getDishRecommendationsFromAvailableIngredients(activeSubject, { ...userProfile, goal: 'Muscle Gain' });
+      const recs = getDishRecommendationsFromAvailableIngredients(activeSubject, { ...userProfile, goal: 'Muscle Gain' }) || [];
       const boosterName = dietary === 'Non-Vegetarian' ? 'Chicken Breast' : (dietary === 'Eggetarian' ? 'Hard-Boiled Egg Whites' : 'Fresh Paneer / Tofu Cubes');
       const boosterProt = dietary === 'Non-Vegetarian' ? 46 : (dietary === 'Eggetarian' ? 22 : 28);
       const boosterCal = dietary === 'Non-Vegetarian' ? 220 : (dietary === 'Eggetarian' ? 120 : 220);
 
       recs.forEach(rec => {
-        rec.dishName = `💪 High-Protein ${rec.dishName.replace(/💪|Mass-Gainer Version:|Fat-Loss Version:/gi, '').trim()}`;
+        if (!rec) return;
+        if (!rec.macros) rec.macros = { calories: 320, protein: 22, carbs: 36, fat: 8, fiber: 6 };
+        const cleanTitle = (rec.dishName || 'Custom Meal').replace(/💪|🔥|High-Protein|Fat-Loss|Mass-Gainer Version:|Fat-Loss Version:/gi, '').trim();
+        rec.dishName = `💪 High-Protein ${cleanTitle}`;
         rec.macros.protein = Math.round((rec.macros.protein || 18) + boosterProt);
         rec.macros.calories = Math.round((rec.macros.calories || 280) + boosterCal);
         rec.fitnessGoalReason = `💪 Boosted with 150g ${boosterName} yielding ~${rec.macros.protein}g protein for rapid muscle recovery.`;
@@ -1804,6 +1807,7 @@ Here are optimal ingredient swaps tailored for your **${dietary}** preference:
       text += `I upgraded your recipes by adding a high-protein booster (**150g ${boosterName}**) to reach your **${proteinTarget}g Daily Target**:\n\n`;
 
       recs.slice(0, 3).forEach((rec, idx) => {
+        if (!rec) return;
         text += `---\n\n`;
         text += `### ${idx + 1}. 🥘 **${rec.dishName}**\n`;
         text += `**Why it matches**: Boosts **${activeSubject}** with extra protein density.\n\n`;
@@ -1818,13 +1822,13 @@ Here are optimal ingredient swaps tailored for your **${dietary}** preference:
         });
         text += `\n`;
         text += `**Estimated Nutrition** *(Approximate per serving)*:\n`;
-        text += `• **Calories**: ~${rec.macros.calories} kcal\n`;
-        text += `• **Protein**: ~${rec.macros.protein} g *(High-Protein Boosted)*\n`;
-        text += `• **Carbohydrates**: ~${rec.macros.carbs || 32} g\n`;
-        text += `• **Fat**: ~${rec.macros.fat || 10} g\n`;
-        text += `• **Fiber**: ~${rec.macros.fiber || 8} g\n`;
+        text += `• **Calories**: ~${rec.macros?.calories || 450} kcal\n`;
+        text += `• **Protein**: ~${rec.macros?.protein || 42} g *(High-Protein Boosted)*\n`;
+        text += `• **Carbohydrates**: ~${rec.macros?.carbs || 32} g\n`;
+        text += `• **Fat**: ~${rec.macros?.fat || 10} g\n`;
+        text += `• **Fiber**: ~${rec.macros?.fiber || 8} g\n`;
         text += `• **Serving Size**: 1 large portion (350g)\n`;
-        text += `• **Fitness Suitability**: ${rec.fitnessGoalReason}\n\n`;
+        text += `• **Fitness Suitability**: ${rec.fitnessGoalReason || 'High protein recovery'}\n\n`;
       });
 
       text += `---\n\n💡 **FitGen Tip**: Consume your high-protein meal within 45 minutes after workout for optimal muscle protein synthesis!`;
@@ -1833,17 +1837,20 @@ Here are optimal ingredient swaps tailored for your **${dietary}** preference:
         text: text,
         dishAnalysis: null,
         ingredientRecommendations: recs,
-        relatedPhotos: getRelatedPhotos(activeSubject),
-        relevantVideos: getVideosForIngredients(activeSubject)
+        relatedPhotos: [],
+        relevantVideos: []
       };
     }
 
-    if (lowerQuery.includes('low calorie')) {
-      const recs = getDishRecommendationsFromAvailableIngredients(activeSubject, { ...userProfile, goal: 'Weight Loss' });
+    if (lowerQuery.includes('low calorie') || lowerQuery.includes('fat loss')) {
+      const recs = getDishRecommendationsFromAvailableIngredients(activeSubject, { ...userProfile, goal: 'Weight Loss' }) || [];
       recs.forEach(rec => {
-        rec.dishName = `🔥 Fat-Loss ${rec.dishName.replace(/💪|Mass-Gainer Version:|Fat-Loss Version:/gi, '').trim()}`;
+        if (!rec) return;
+        if (!rec.macros) rec.macros = { calories: 300, protein: 20, carbs: 32, fat: 8, fiber: 7 };
+        const cleanTitle = (rec.dishName || 'Custom Meal').replace(/💪|🔥|High-Protein|Fat-Loss|Mass-Gainer Version:|Fat-Loss Version:/gi, '').trim();
+        rec.dishName = `🔥 Fat-Loss ${cleanTitle}`;
         rec.macros.calories = Math.round((rec.macros.calories || 280) * 0.75);
-        rec.macros.fat = Math.max(4, Math.round((rec.macros.fat || 8) * 0.5));
+        rec.macros.fat = Math.max(3, Math.round((rec.macros.fat || 8) * 0.5));
         rec.fitnessGoalReason = `🔥 Calorie Deficit Version: Calibrated under ${rec.macros.calories} kcal with high fiber satiety to support fat loss.`;
       });
 
@@ -1851,6 +1858,7 @@ Here are optimal ingredient swaps tailored for your **${dietary}** preference:
       text += `I calibrated your recipes for a **Calorie Deficit** while preserving high protein & fiber satiety:\n\n`;
 
       recs.slice(0, 3).forEach((rec, idx) => {
+        if (!rec) return;
         text += `---\n\n`;
         text += `### ${idx + 1}. 🥗 **${rec.dishName}**\n`;
         text += `**Why it matches**: Low-calorie, high-fiber adaptation of **${activeSubject}**.\n\n`;
@@ -1863,11 +1871,11 @@ Here are optimal ingredient swaps tailored for your **${dietary}** preference:
           text += `${sIdx + 1}. **${step.title}**: ${step.description}\n`;
         });
         text += `\n**Estimated Nutrition** *(Approximate per serving)*:\n`;
-        text += `• **Calories**: ~${rec.macros.calories} kcal *(Calorie Deficit)*\n`;
-        text += `• **Protein**: ~${rec.macros.protein} g\n`;
-        text += `• **Carbohydrates**: ~${rec.macros.carbs || 28} g\n`;
-        text += `• **Fat**: ~${rec.macros.fat || 5} g\n`;
-        text += `• **Fiber**: ~${rec.macros.fiber || 9} g\n\n`;
+        text += `• **Calories**: ~${rec.macros?.calories || 210} kcal *(Calorie Deficit)*\n`;
+        text += `• **Protein**: ~${rec.macros?.protein || 22} g\n`;
+        text += `• **Carbohydrates**: ~${rec.macros?.carbs || 28} g\n`;
+        text += `• **Fat**: ~${rec.macros?.fat || 4} g\n`;
+        text += `• **Fiber**: ~${rec.macros?.fiber || 9} g\n\n`;
       });
 
       text += `---\n\n💡 **FitGen Tip**: Cooking with air-fryer or 1 tsp cold-pressed oil saves ~120 kcal per meal!`;
@@ -1876,8 +1884,8 @@ Here are optimal ingredient swaps tailored for your **${dietary}** preference:
         text: text,
         dishAnalysis: null,
         ingredientRecommendations: recs,
-        relatedPhotos: getRelatedPhotos(activeSubject),
-        relevantVideos: getVideosForIngredients(activeSubject)
+        relatedPhotos: [],
+        relevantVideos: []
       };
     }
 
