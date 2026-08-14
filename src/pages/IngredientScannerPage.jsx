@@ -495,17 +495,27 @@ export default function IngredientScannerPage() {
         finalVideos = botResponse.relevantVideos.slice(0, 4);
       }
 
-      const responseText = botResponse?.text && botResponse.text.trim()
+      let localBackup = null;
+      try {
+        localBackup = processConversationalChatbotQuery(currentText, messages, effectiveUserProfile);
+      } catch (bErr) {
+        console.warn("Local backup query error:", bErr);
+      }
+
+      const responseText = (botResponse?.text && botResponse.text.trim())
         ? botResponse.text
-        : `👋 How can I assist with your nutrition and meal goals today?`;
+        : (localBackup?.text || `🥗 Here are your custom recipe recommendations and macro estimates for **${currentText}**!`);
+
+      const finalIngRecs = botResponse?.ingredientRecommendations || localBackup?.ingredientRecommendations || null;
+      const finalDishAnalysis = botResponse?.dishAnalysis || localBackup?.dishAnalysis || null;
 
       const aiReply = {
         id: `msg-ai-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
         sender: 'ai',
         text: responseText,
-        sourceModel: botResponse?.source || 'FitGen AI',
-        dishAnalysis: botResponse?.dishAnalysis || null,
-        ingredientRecommendations: botResponse?.ingredientRecommendations || null,
+        sourceModel: botResponse?.source || 'FitGen Turbo Local Engine',
+        dishAnalysis: finalDishAnalysis,
+        ingredientRecommendations: finalIngRecs,
         relatedPhotos: finalPhotos,
         relevantVideos: finalVideos
       };
@@ -513,7 +523,7 @@ export default function IngredientScannerPage() {
       setMessages((prev) => [...prev, aiReply]);
     } catch (err) {
       console.error("Error generating AI analysis:", err);
-      let fallbackText = `👋 I'm here to help with your nutrition and fitness goals! How can I assist you today?`;
+      let fallbackText = `🥗 Here are your custom recipe recommendations and macro estimates for **${currentText}**!`;
       let fallbackDishAnalysis = null;
       let fallbackIngRecs = null;
 
