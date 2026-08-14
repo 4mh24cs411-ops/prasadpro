@@ -220,28 +220,47 @@ export function AppProvider({ children }) {
     }
   }, []);
 
-  // Helper to load specific account data from localStorage
+  // Helper to derive name from email (e.g., mahadev@gmail.com -> Mahadev)
+  const deriveNameFromEmail = (emailStr) => {
+    if (!emailStr) return 'Athlete';
+    const prefix = emailStr.split('@')[0] || '';
+    const clean = prefix.replace(/[._-]/g, ' ').trim();
+    if (!clean) return 'Athlete';
+    return clean.charAt(0).toUpperCase() + clean.slice(1);
+  };
+
+  // Helper to load specific account data from localStorage (Strictly isolated by email!)
   const loadAccountData = (emailStr) => {
     if (!emailStr) return;
     const cleanEmail = emailStr.trim().toLowerCase();
     
-    // Load profile
+    // Load profile strictly for this user email
     try {
-      const savedProfile = localStorage.getItem(`fitgen_profile_${cleanEmail}`) || localStorage.getItem('fitgen_current_user_profile');
+      const savedProfile = localStorage.getItem(`fitgen_profile_${cleanEmail}`);
       if (savedProfile) {
         const parsed = JSON.parse(savedProfile);
-        setUserProfile({ ...DEFAULT_PROFILE, ...parsed });
+        if (parsed && typeof parsed === 'object') {
+          const foundUser = registeredUsers.find((u) => u.email.toLowerCase() === cleanEmail);
+          const userName = parsed.name || foundUser?.fullName || deriveNameFromEmail(cleanEmail);
+          setUserProfile({
+            ...DEFAULT_PROFILE,
+            ...parsed,
+            name: userName,
+            email: cleanEmail
+          });
+        }
       } else {
         const foundUser = registeredUsers.find((u) => u.email.toLowerCase() === cleanEmail);
-        if (foundUser) {
-          setUserProfile((prev) => ({
-            ...DEFAULT_PROFILE,
-            ...prev,
-            name: foundUser.fullName || prev.name || DEFAULT_PROFILE.name,
-            email: foundUser.email,
-            goal: foundUser.goal || prev.goal || DEFAULT_PROFILE.goal
-          }));
-        }
+        const userName = foundUser?.fullName || deriveNameFromEmail(cleanEmail);
+        const initialProfile = {
+          ...DEFAULT_PROFILE,
+          name: userName,
+          email: cleanEmail,
+          goal: foundUser?.goal || DEFAULT_PROFILE.goal,
+          hasCompletedProfile: false
+        };
+        setUserProfile(initialProfile);
+        localStorage.setItem(`fitgen_profile_${cleanEmail}`, JSON.stringify(initialProfile));
       }
     } catch (e) {
       console.warn('Error loading account profile:', e);
@@ -316,15 +335,18 @@ export function AppProvider({ children }) {
     const cleanEmail = (email || '').trim().toLowerCase();
     const cleanPassword = (password || '').trim();
 
+    if (!cleanEmail) return { success: false, error: 'NO_EMAIL' };
+
     const found = registeredUsers.find(
       (u) => u.email.toLowerCase().trim() === cleanEmail
     );
 
     if (!found) {
-      return { success: false, error: 'NO_ACCOUNT' };
+      // Auto-register user seamlessly on first login if password provided
+      return { success: true, isNewAccount: true };
     }
 
-    if (found.password !== cleanPassword) {
+    if (found.password && found.password !== cleanPassword) {
       return { success: false, error: 'INVALID_PASSWORD' };
     }
 
@@ -334,32 +356,65 @@ export function AppProvider({ children }) {
   // Login Handler
   const login = (email, password, googleProfile = null) => {
     const cleanEmail = (email || '').trim().toLowerCase();
+    const derivedName = googleProfile?.name || deriveNameFromEmail(cleanEmail);
+
+    // Register user if not already in list
+    setRegisteredUsers((prev) => {
+      const exists = prev.some((u) => u.email.toLowerCase() === cleanEmail);
+      if (exists) return prev;
+      return [
+        ...prev,
+        {
+          fullName: derivedName,
+          email: cleanEmail,
+          password: password || 'password123',
+          goal: 'Muscle Gain'
+        }
+      ];
+    });
+
     setCurrentUserEmail(cleanEmail);
     localStorage.setItem('fitgen_active_user', cleanEmail);
     localStorage.setItem('fitgen_auth_status', 'true');
     setIsAuthenticated(true);
 
-    loadAccountData(cleanEmail);
+    // Load account profile strictly for this user email
+    let userProf = loadAccountData(cleanEmail);
+    if (!userProf || !userProf.name || userProf.name === 'Alex Morgan') {
+      userProf = {
+        ...DEFAULT_PROFILE,
+        name: derivedName,
+        email: cleanEmail,
+        avatar: googleProfile?.avatar || DEFAULT_PROFILE.avatar,
+        hasCompletedProfile: false
+      };
+    } else {
+      userProf = {
+        ...userProf,
+        name: userProf.name || derivedName,
+        email: cleanEmail
+      };
+    }
+
+    setUserProfile(userProf);
+    localStorage.setItem(`fitgen_profile_${cleanEmail}`, JSON.stringify(userProf));
 
     if (googleProfile) {
-      setUserProfile((prev) => ({
-        ...prev,
-        name: googleProfile.name || prev.name,
-        email: cleanEmail,
-        avatar: googleProfile.avatar || prev.avatar
-      }));
-      addToast(`Signed in with Google as ${googleProfile.name}!`, 'success');
+      addToast(`Signed in with Google as ${derivedName}!`, 'success');
     } else {
-      addToast('Welcome back to FitGen!', 'success');
+      addToast(`Welcome back to FitGen, ${userProf.name}!`, 'success');
     }
+
+    return userProf;
   };
 
   // Signup Handler
   const signup = (userData) => {
     if (userData && userData.email) {
       const cleanEmail = userData.email.trim().toLowerCase();
+      const userName = userData.fullName || deriveNameFromEmail(cleanEmail);
       const newUser = {
-        fullName: userData.fullName || 'New Athlete',
+        fullName: userName,
         email: cleanEmail,
         password: userData.password || 'password123',
         goal: 'Muscle Gain'
@@ -377,19 +432,21 @@ export function AppProvider({ children }) {
 
       const initialProfile = {
         ...DEFAULT_PROFILE,
-        name: newUser.fullName,
-        email: newUser.email,
+        name: userName,
+        email: cleanEmail,
         avatar: userData.avatar || DEFAULT_PROFILE.avatar,
-        goal: newUser.goal
+        goal: newUser.goal,
+        hasCompletedProfile: false
       };
 
       setUserProfile(initialProfile);
+      localStorage.setItem(`fitgen_profile_${cleanEmail}`, JSON.stringify(initialProfile));
       setDailyLog(DEFAULT_DAILY_LOG);
       setGroceryList(INITIAL_GROCERY_LIST);
     }
 
     setIsAuthenticated(true);
-    addToast('Google Account linked & registered successfully!', 'success');
+    addToast('Account registered successfully!', 'success');
   };
 
   // Complete Logout Handler

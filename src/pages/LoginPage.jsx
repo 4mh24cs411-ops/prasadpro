@@ -47,8 +47,12 @@ export default function LoginPage() {
       }
 
       // Valid account & correct password! Log in and proceed
-      login(email, password);
-      navigate('/dashboard');
+      const userProf = login(email, password);
+      if (userProf && userProf.hasCompletedProfile) {
+        navigate('/dashboard');
+      } else {
+        navigate('/goal-selection');
+      }
     }, 700);
   };
 
@@ -59,8 +63,12 @@ export default function LoginPage() {
 
   const handleSelectGoogleAccount = (googleAccount) => {
     setShowGoogleModal(false);
-    login(googleAccount.email, 'google-oauth', googleAccount);
-    navigate('/dashboard');
+    const userProf = login(googleAccount.email, 'google-oauth', googleAccount);
+    if (userProf && userProf.hasCompletedProfile) {
+      navigate('/dashboard');
+    } else {
+      navigate('/goal-selection');
+    }
   };
 
   const togglePasswordVisibility = (e) => {
