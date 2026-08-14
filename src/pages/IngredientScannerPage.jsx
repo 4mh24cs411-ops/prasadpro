@@ -475,33 +475,21 @@ export default function IngredientScannerPage() {
         };
       }
 
-      // Ultra-safe photo and video extraction with complete error isolation
+      // Ultra-safe photo and video extraction: Only include media if explicitly returned by AI model or local engine
       let finalPhotos = [];
       let finalVideos = [];
 
-      try {
-        if (botResponse?.relatedPhotos && Array.isArray(botResponse.relatedPhotos) && botResponse.relatedPhotos.length > 0) {
-          finalPhotos = botResponse.relatedPhotos;
-        } else {
-          finalPhotos = getRelatedPhotos(currentText) || [];
-        }
-      } catch (pErr) {
-        finalPhotos = getRelatedPhotos('vegetables') || [];
+      if (botResponse?.relatedPhotos && Array.isArray(botResponse.relatedPhotos) && botResponse.relatedPhotos.length > 0) {
+        finalPhotos = botResponse.relatedPhotos;
       }
 
-      try {
-        if (botResponse?.relevantVideos && Array.isArray(botResponse.relevantVideos) && botResponse.relevantVideos.length > 0) {
-          finalVideos = botResponse.relevantVideos.slice(0, 4);
-        } else {
-          finalVideos = (getVideosForIngredients(currentText) || []).slice(0, 4);
-        }
-      } catch (vErr) {
-        finalVideos = (getVideosForIngredients('vegetables') || []).slice(0, 4);
+      if (botResponse?.relevantVideos && Array.isArray(botResponse.relevantVideos) && botResponse.relevantVideos.length > 0) {
+        finalVideos = botResponse.relevantVideos.slice(0, 4);
       }
 
       const responseText = botResponse?.text && botResponse.text.trim()
         ? botResponse.text
-        : `Here is your complete nutrition breakdown for **${currentText}**!`;
+        : `👋 How can I assist with your nutrition and meal goals today?`;
 
       const aiReply = {
         id: `msg-ai-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
@@ -517,26 +505,20 @@ export default function IngredientScannerPage() {
       setMessages((prev) => [...prev, aiReply]);
     } catch (err) {
       console.error("Error generating AI analysis:", err);
-      let fallbackText = `🍽️ **FitGen AI Recipe & Nutrition Breakdown for "${currentText}"**:\n\nBased on your typed ingredients (**${currentText}**), here are your custom recipe recommendations and macro estimates!`;
+      let fallbackText = `👋 I'm here to help with your nutrition and fitness goals! How can I assist you today?`;
       let fallbackDishAnalysis = null;
       let fallbackIngRecs = null;
 
       try {
-        const fallbackBotRes = processConversationalChatbotQuery(currentText, [], userProfile);
-        if (fallbackBotRes) {
-          if (fallbackBotRes.text) fallbackText = fallbackBotRes.text;
-          fallbackDishAnalysis = fallbackBotRes.dishAnalysis || null;
-          fallbackIngRecs = fallbackBotRes.ingredientRecommendations || null;
+        const fallbackBotRes = processConversationalChatbotQuery(currentText, messages, effectiveUserProfile);
+        if (fallbackBotRes && fallbackBotRes.text) {
+          fallbackText = fallbackBotRes.text;
+          fallbackDishAnalysis = fallbackBotRes.dishAnalysis;
+          fallbackIngRecs = fallbackBotRes.ingredientRecommendations;
         }
-      } catch (innerErr) {
-        console.error("Fallback engine error:", innerErr);
+      } catch (fErr) {
+        console.warn("Fallback local query error:", fErr);
       }
-
-      let safeFallbackPhotos = [];
-      let safeFallbackVideos = [];
-
-      try { safeFallbackPhotos = getRelatedPhotos(currentText) || []; } catch (e) {}
-      try { safeFallbackVideos = (getVideosForIngredients(currentText) || []).slice(0, 3); } catch (e) {}
 
       const errReply = {
         id: `msg-ai-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
@@ -545,8 +527,8 @@ export default function IngredientScannerPage() {
         sourceModel: 'FitGen Turbo Local Engine',
         dishAnalysis: fallbackDishAnalysis,
         ingredientRecommendations: fallbackIngRecs,
-        relatedPhotos: safeFallbackPhotos,
-        relevantVideos: safeFallbackVideos
+        relatedPhotos: [],
+        relevantVideos: []
       };
       setMessages((prev) => [...prev, errReply]);
     } finally {

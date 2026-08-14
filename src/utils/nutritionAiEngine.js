@@ -1620,8 +1620,10 @@ What would you like to ask me today?
                      lowerQuery.includes('give me the recipe') || 
                      lowerQuery.includes('how many calories') || 
                      lowerQuery.includes('show nutrition') || 
+                     lowerQuery === 'nutrition' ||
                      lowerQuery.includes('show missing ingredients') || 
                      lowerQuery.includes('give me more options') ||
+                     lowerQuery.includes('more options') ||
                      lowerQuery.includes('show me photos') ||
                      lowerQuery.includes('show photos') ||
                      lowerQuery === 'photos' ||
@@ -1636,7 +1638,7 @@ What would you like to ask me today?
   if (isFollowUp) {
     const { lastIngredients, lastDish } = extractContextFromHistory(conversationHistory);
     const ingredientsStr = lastIngredients.length > 0 ? lastIngredients.map(i => i.charAt(0).toUpperCase() + i.slice(1)).join(', ') : null;
-    const activeSubject = ingredientsStr || lastDish || 'tomato, cabbage, onion, carrot, beans';
+    const activeSubject = ingredientsStr || lastDish || 'Tomato, Cabbage, Onion, Carrot, Beans, Egg, Rice';
 
     if (lowerQuery.includes('show me photos') || lowerQuery.includes('show photos') || lowerQuery === 'photos') {
       return {
@@ -1646,7 +1648,7 @@ Tap any photo below to view in full-screen Lightbox mode!`,
         dishAnalysis: null,
         ingredientRecommendations: null,
         relatedPhotos: getRelatedPhotos(activeSubject),
-        relevantVideos: getVideosForIngredients(activeSubject)
+        relevantVideos: []
       };
     }
 
@@ -1657,8 +1659,103 @@ Tap any photo below to view in full-screen Lightbox mode!`,
 Click any video card below to start interactive video tutorial playback!`,
         dishAnalysis: null,
         ingredientRecommendations: null,
-        relatedPhotos: getRelatedPhotos(activeSubject),
+        relatedPhotos: [],
         relevantVideos: getVideosForIngredients(activeSubject)
+      };
+    }
+
+    if (lowerQuery.includes('show nutrition') || lowerQuery === 'nutrition' || lowerQuery.includes('how many calories')) {
+      const recs = getDishRecommendationsFromAvailableIngredients(activeSubject, userProfile);
+      let text = `📊 **Nutritional Audit & Macro Breakdown for "${activeSubject}"**:\n\n`;
+      text += `Calibrated for your **${goal}** plan (**${dietary}** | Daily Target: **${proteinTarget}g Protein**):\n\n`;
+
+      recs.slice(0, 3).forEach((rec, idx) => {
+        const pTarget = Math.min(100, Math.round(((rec.macros?.protein || 20) / proteinTarget) * 100));
+        text += `---\n`;
+        text += `### ${idx + 1}. 🥘 **${rec.dishName}**\n`;
+        text += `• 🔥 **Calories**: **~${rec.macros?.calories || 320} kcal**\n`;
+        text += `• ⚡ **Protein**: **~${rec.macros?.protein || 24}g** (${pTarget}% of daily target)\n`;
+        text += `• 🍞 **Carbohydrates**: ~${rec.macros?.carbs || 36}g (Complex GI carbs)\n`;
+        text += `• 🧈 **Fats**: ~${rec.macros?.fat || 8}g (Healthy unsaturated fats)\n`;
+        text += `• 🥬 **Dietary Fiber**: ~${rec.macros?.fiber || 7}g (High satiety rating)\n\n`;
+      });
+
+      text += `---\n💡 **FitGen Satiety Tip**: High-fiber vegetable volume paired with bioavailable protein extends fullness for 4+ hours!`;
+
+      return {
+        text: text,
+        dishAnalysis: null,
+        ingredientRecommendations: null,
+        relatedPhotos: [],
+        relevantVideos: []
+      };
+    }
+
+    if (lowerQuery.includes('give me the recipe') || lowerQuery.includes('recipe')) {
+      const recs = getDishRecommendationsFromAvailableIngredients(activeSubject, userProfile);
+      let text = `👨‍🍳 **Step-by-Step Cooking Guide for "${activeSubject}"**:\n\n`;
+
+      recs.slice(0, 2).forEach((rec, idx) => {
+        text += `### ${idx + 1}. 🍲 **${rec.dishName}**\n`;
+        text += `⏱️ **Prep Time**: ${rec.prepTime} | 🔥 **Cook Time**: ${rec.cookTime}\n\n`;
+        text += `**Available Ingredients Used**:\n`;
+        (rec.availableIngredientsUsed || []).forEach(i => {
+          text += `• ${i.icon || '🥗'} **${i.name}**: ${i.amount}\n`;
+        });
+        text += `\n**Step-by-Step Instructions**:\n`;
+        (rec.instructions || []).forEach((s, sIdx) => {
+          text += `${sIdx + 1}. **${s.title}**: ${s.description}\n`;
+        });
+        text += `\n`;
+      });
+
+      return {
+        text: text,
+        dishAnalysis: null,
+        ingredientRecommendations: null,
+        relatedPhotos: [],
+        relevantVideos: []
+      };
+    }
+
+    if (lowerQuery.includes('give me more options') || lowerQuery.includes('more options')) {
+      const recs = getDishRecommendationsFromAvailableIngredients(activeSubject, userProfile);
+      let text = `🥗 **Alternative Dish Recommendations for "${activeSubject}"**:\n\n`;
+      text += `Here are 3 fresh dish variations strictly crafted using your available ingredients:\n\n`;
+
+      recs.slice(0, 3).forEach((rec, idx) => {
+        text += `### ${idx + 1}. 🥘 **${rec.dishName}**\n`;
+        text += `• **Protein Yield**: ~${rec.macros?.protein}g Protein | ~${rec.macros?.calories} kcal\n`;
+        text += `• **Cuisine**: ${rec.cuisine}\n\n`;
+      });
+
+      return {
+        text: text,
+        dishAnalysis: null,
+        ingredientRecommendations: recs,
+        relatedPhotos: [],
+        relevantVideos: []
+      };
+    }
+
+    if (lowerQuery.includes('show missing ingredients') || lowerQuery.includes('missing ingredients')) {
+      const recs = getDishRecommendationsFromAvailableIngredients(activeSubject, userProfile);
+      let text = `🛒 **Optional Pantry Staples & Spices for "${activeSubject}"**:\n\n`;
+
+      recs.slice(0, 3).forEach((rec, idx) => {
+        text += `### ${idx + 1}. 🍲 **${rec.dishName}**\n`;
+        text += `• **Owned Ingredients**: ${rec.availableIngredientsUsed.map(i => i.name).join(', ')}\n`;
+        text += `• 🧂 **Optional Staples**: ${rec.optionalIngredients.map(o => `${o.name} (${o.amount})`).join(', ')}\n\n`;
+      });
+
+      text += `💡 *Tip: Optional staples (salt, pepper, oil, turmeric) enhance flavor without altering core macro balance.*`;
+
+      return {
+        text: text,
+        dishAnalysis: null,
+        ingredientRecommendations: null,
+        relatedPhotos: [],
+        relevantVideos: []
       };
     }
 
@@ -1685,8 +1782,8 @@ Here are optimal ingredient swaps tailored for your **${dietary}** preference:
 💡 **FitGen Tip**: Tell me which ingredient you want to substitute, and I'll recalculate your recipe macros!`,
         dishAnalysis: null,
         ingredientRecommendations: null,
-        relatedPhotos: getRelatedPhotos(activeSubject),
-        relevantVideos: getVideosForIngredients(activeSubject)
+        relatedPhotos: [],
+        relevantVideos: []
       };
     }
 
