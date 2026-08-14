@@ -391,6 +391,8 @@ export default function IngredientScannerPage() {
     addToast(`Generated full recipe for "${dishAnalysis.dishName}"!`, 'success');
   };
 
+  const [activeSuggestion, setActiveSuggestion] = useState(null);
+
   // Send Prompt handler
   const handleSendPrompt = async (e, overrideText = null) => {
     if (e) e.preventDefault();
@@ -398,6 +400,12 @@ export default function IngredientScannerPage() {
     const queryToUse = overrideText || promptText;
 
     if (!queryToUse.trim() && !attachedImage) return;
+
+    if (overrideText) {
+      setActiveSuggestion(overrideText.toLowerCase().trim());
+    } else {
+      setActiveSuggestion(null);
+    }
 
     // Automatically switch to chat mode if currently on another tab
     if (activeMode !== 'chat') {
@@ -1259,42 +1267,66 @@ export default function IngredientScannerPage() {
 
                     <button
                       onClick={() => handleSendPrompt(null, "give me the recipe")}
-                      className="px-3 py-1.5 rounded-xl bg-slate-900 hover:bg-slate-800 border border-slate-700 text-slate-200 hover:text-white text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer shadow-sm active:scale-95"
+                      className={`px-3 py-1.5 rounded-xl border text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer shadow-sm active:scale-95 ${
+                        activeSuggestion === "give me the recipe"
+                          ? "bg-emerald-500/20 text-emerald-300 border-emerald-500/40 shadow-emerald-500/20 font-black"
+                          : "bg-slate-900/90 hover:bg-slate-800 border-slate-700/80 text-slate-200 hover:text-white"
+                      }`}
                     >
                       🍳 <span>Give me the recipe</span>
                     </button>
 
                     <button
                       onClick={() => handleSendPrompt(null, "make it high protein")}
-                      className="px-3 py-1.5 rounded-xl bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/30 text-emerald-300 text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer shadow-sm active:scale-95"
+                      className={`px-3 py-1.5 rounded-xl border text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer shadow-sm active:scale-95 ${
+                        activeSuggestion === "make it high protein"
+                          ? "bg-emerald-500/20 text-emerald-300 border-emerald-500/40 shadow-emerald-500/20 font-black"
+                          : "bg-slate-900/90 hover:bg-slate-800 border-slate-700/80 text-slate-200 hover:text-white"
+                      }`}
                     >
                       💪 <span>Make it high protein</span>
                     </button>
 
                     <button
                       onClick={() => handleSendPrompt(null, "make it low calorie")}
-                      className="px-3 py-1.5 rounded-xl bg-slate-900 hover:bg-slate-800 border border-slate-700 text-slate-200 hover:text-white text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer shadow-sm active:scale-95"
+                      className={`px-3 py-1.5 rounded-xl border text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer shadow-sm active:scale-95 ${
+                        activeSuggestion === "make it low calorie"
+                          ? "bg-amber-500/20 text-amber-300 border-amber-500/40 shadow-amber-500/20 font-black"
+                          : "bg-slate-900/90 hover:bg-slate-800 border-slate-700/80 text-slate-200 hover:text-white"
+                      }`}
                     >
                       🔥 <span>Make it low calorie</span>
                     </button>
 
                     <button
                       onClick={() => handleSendPrompt(null, "give me more options")}
-                      className="px-3 py-1.5 rounded-xl bg-slate-900 hover:bg-slate-800 border border-slate-700 text-slate-200 hover:text-white text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer shadow-sm active:scale-95"
+                      className={`px-3 py-1.5 rounded-xl border text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer shadow-sm active:scale-95 ${
+                        activeSuggestion === "give me more options"
+                          ? "bg-emerald-500/20 text-emerald-300 border-emerald-500/40 shadow-emerald-500/20 font-black"
+                          : "bg-slate-900/90 hover:bg-slate-800 border-slate-700/80 text-slate-200 hover:text-white"
+                      }`}
                     >
                       🥗 <span>Give me more options</span>
                     </button>
 
                     <button
                       onClick={() => handleSendPrompt(null, "show nutrition")}
-                      className="px-3 py-1.5 rounded-xl bg-slate-900 hover:bg-slate-800 border border-slate-700 text-slate-200 hover:text-white text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer shadow-sm active:scale-95"
+                      className={`px-3 py-1.5 rounded-xl border text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer shadow-sm active:scale-95 ${
+                        activeSuggestion === "show nutrition"
+                          ? "bg-emerald-500/20 text-emerald-300 border-emerald-500/40 shadow-emerald-500/20 font-black"
+                          : "bg-slate-900/90 hover:bg-slate-800 border-slate-700/80 text-slate-200 hover:text-white"
+                      }`}
                     >
                       📊 <span>Show nutrition</span>
                     </button>
 
                     <button
                       onClick={() => handleSendPrompt(null, "show missing ingredients")}
-                      className="px-3 py-1.5 rounded-xl bg-slate-900 hover:bg-slate-800 border border-slate-700 text-slate-200 hover:text-white text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer shadow-sm active:scale-95"
+                      className={`px-3 py-1.5 rounded-xl border text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer shadow-sm active:scale-95 ${
+                        activeSuggestion === "show missing ingredients"
+                          ? "bg-emerald-500/20 text-emerald-300 border-emerald-500/40 shadow-emerald-500/20 font-black"
+                          : "bg-slate-900/90 hover:bg-slate-800 border-slate-700/80 text-slate-200 hover:text-white"
+                      }`}
                     >
                       🛒 <span>Show missing ingredients</span>
                     </button>
