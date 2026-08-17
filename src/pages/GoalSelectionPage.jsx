@@ -95,20 +95,43 @@ export default function GoalSelectionPage() {
   const [weightLbs, setWeightLbs] = useState(143);
 
   // Step 2: Fitness Goal & Activity
-  const [selectedGoal, setSelectedGoal] = useState(userProfile.goal || 'Muscle Gain');
-  const [activityLevel, setActivityLevel] = useState(userProfile.activityLevel || 'Active');
+  const [selectedGoal, setSelectedGoal] = useState(() => {
+    const raw = userProfile.goal || 'Muscle Gain';
+    const match = FITNESS_GOALS.find((g) => g.id === raw || (typeof raw === 'string' && raw.includes(g.id)));
+    return match ? match.id : 'Muscle Gain';
+  });
+
+  const [activityLevel, setActivityLevel] = useState(() => {
+    const raw = userProfile.activityLevel || 'Active';
+    if (typeof raw === 'string') {
+      if (raw.includes('Sedentary')) return 'Sedentary';
+      if (raw.includes('Lightly')) return 'Lightly Active';
+      if (raw.includes('Moderately')) return 'Moderately Active';
+      if (raw.includes('Very')) return 'Very Active';
+      if (raw.includes('Active')) return 'Active';
+    }
+    return 'Active';
+  });
   const [workoutsPerWeek, setWorkoutsPerWeek] = useState(4);
   const [workoutDuration, setWorkoutDuration] = useState('45-60 mins');
   const [workoutType, setWorkoutType] = useState('Strength & Hypertrophy');
   const [targetWeight, setTargetWeight] = useState(userProfile.weight || 65);
 
   // Step 3: Dietary Profile & Exclusions
-  const [selectedDietary, setSelectedDietary] = useState(userProfile.dietary || 'Vegetarian');
+  const [selectedDietary, setSelectedDietary] = useState(() => {
+    const raw = userProfile.dietary || 'Vegetarian';
+    const match = DIETARY_CHOICES.find((d) => d.id === raw || (typeof raw === 'string' && raw.includes(d.id)));
+    return match ? match.id : 'Vegetarian';
+  });
   const [selectedAllergies, setSelectedAllergies] = useState(userProfile.allergies || ['Peanuts']);
   const [customAllergyInput, setCustomAllergyInput] = useState('');
 
   // Step 4: Region & Cuisine
-  const [selectedRegion, setSelectedRegion] = useState(userProfile.nation || 'India 🇮🇳');
+  const [selectedRegion, setSelectedRegion] = useState(() => {
+    const raw = userProfile.nation || 'India 🇮🇳';
+    const match = REGIONS_LIST.find((r) => r.id === raw || r.name === raw || (typeof raw === 'string' && raw.includes(r.name)));
+    return match ? match.id : 'India 🇮🇳';
+  });
   const [selectedCuisines, setSelectedCuisines] = useState(
     Array.isArray(userProfile.cuisines) ? userProfile.cuisines : ['Indian', 'North Indian', 'Punjabi']
   );
@@ -150,11 +173,11 @@ export default function GoalSelectionPage() {
 
     // Activity multiplier
     let actMult = 1.375;
-    if (activityLevel.includes('Sedentary')) actMult = 1.2;
-    if (activityLevel.includes('Lightly')) actMult = 1.375;
-    if (activityLevel.includes('Moderately')) actMult = 1.55;
-    if (activityLevel.includes('Very')) actMult = 1.9;
-    if (activityLevel.includes('Active') && !activityLevel.includes('Moderately')) actMult = 1.725;
+    if (activityLevel === 'Sedentary') actMult = 1.2;
+    else if (activityLevel === 'Lightly Active') actMult = 1.375;
+    else if (activityLevel === 'Moderately Active') actMult = 1.55;
+    else if (activityLevel === 'Very Active') actMult = 1.9;
+    else if (activityLevel === 'Active') actMult = 1.725;
 
     let tdee = Math.round(bmr * actMult);
 
@@ -482,7 +505,7 @@ export default function GoalSelectionPage() {
               <label className="block text-xs font-bold text-slate-300 mb-2 uppercase tracking-wider">Activity Level</label>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
                 {ACTIVITY_LEVELS.map((act) => {
-                  const isSelected = activityLevel.includes(act.id);
+                  const isSelected = activityLevel === act.id;
                   return (
                     <div
                       key={act.id}
