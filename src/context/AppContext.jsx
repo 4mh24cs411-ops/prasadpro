@@ -342,8 +342,7 @@ export function AppProvider({ children }) {
     );
 
     if (!found) {
-      // Auto-register user seamlessly on first login if password provided
-      return { success: true, isNewAccount: true };
+      return { success: false, error: 'NO_ACCOUNT' };
     }
 
     if (found.password && found.password !== cleanPassword) {
@@ -353,25 +352,29 @@ export function AppProvider({ children }) {
     return { success: true, user: found };
   };
 
-  // Login Handler
+  // Login Handler (Only authenticates existing users!)
   const login = (email, password, googleProfile = null) => {
     const cleanEmail = (email || '').trim().toLowerCase();
-    const derivedName = googleProfile?.name || deriveNameFromEmail(cleanEmail);
+    const existingUser = registeredUsers.find((u) => u.email.toLowerCase() === cleanEmail);
 
-    // Register user if not already in list
-    setRegisteredUsers((prev) => {
-      const exists = prev.some((u) => u.email.toLowerCase() === cleanEmail);
-      if (exists) return prev;
-      return [
+    if (!existingUser && !googleProfile) {
+      addToast(`No account found for ${cleanEmail}. Please sign up first!`, 'error');
+      return null;
+    }
+
+    const derivedName = googleProfile?.name || existingUser?.fullName || deriveNameFromEmail(cleanEmail);
+
+    if (!existingUser && googleProfile) {
+      setRegisteredUsers((prev) => [
         ...prev,
         {
           fullName: derivedName,
           email: cleanEmail,
-          password: password || 'password123',
+          password: 'google-oauth-pass',
           goal: 'Muscle Gain'
         }
-      ];
-    });
+      ]);
+    }
 
     setCurrentUserEmail(cleanEmail);
     localStorage.setItem('fitgen_active_user', cleanEmail);
@@ -386,7 +389,7 @@ export function AppProvider({ children }) {
         name: derivedName,
         email: cleanEmail,
         avatar: googleProfile?.avatar || DEFAULT_PROFILE.avatar,
-        hasCompletedProfile: false
+        hasCompletedProfile: Boolean(existingUser?.hasCompletedProfile)
       };
     } else {
       userProf = {

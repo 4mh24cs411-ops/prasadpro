@@ -63,7 +63,16 @@ export default function LoginPage() {
 
   const handleSelectGoogleAccount = (googleAccount) => {
     setShowGoogleModal(false);
-    const userProf = login(googleAccount.email, 'google-oauth', googleAccount);
+    const cleanEmail = (googleAccount?.email || '').trim().toLowerCase();
+    const checkRes = validateCredentials(cleanEmail, 'google-oauth');
+
+    if (!checkRes.success && checkRes.error === 'NO_ACCOUNT') {
+      setNoAccountError(true);
+      setErrorMsg(`No account found for Google email "${cleanEmail}". You do not have an account yet. Please Sign Up to create one.`);
+      return;
+    }
+
+    const userProf = login(cleanEmail, 'google-oauth', googleAccount);
     if (userProf && userProf.hasCompletedProfile) {
       navigate('/dashboard');
     } else {
