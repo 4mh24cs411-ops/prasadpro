@@ -51,15 +51,24 @@ async function fileToBase64(file) {
 /**
  * Master Hybrid Query Processor: Calls Gemini API if Key is Available, else uses FitGen Local AI Engine
  */
-export async function queryDualAiModel({ userPrompt, attachedFile, conversationHistory = [], userProfile = {} }) {
+export async function queryDualAiModel({ userPrompt, attachedFile, attachedFiles = [], conversationHistory = [], userProfile = {} }) {
   const apiKey = getGeminiApiKey();
+
+  const filesToProcess = Array.isArray(attachedFiles) && attachedFiles.length > 0
+    ? attachedFiles
+    : (attachedFile ? [attachedFile] : []);
 
   // If no Gemini API key configured, use local engine
   if (!apiKey) {
     let detectedIngs = [];
-    if (attachedFile) {
-      const imgRes = await analyzeImageFile(attachedFile);
-      detectedIngs = imgRes.detectedIngredients || [];
+    if (filesToProcess.length > 0) {
+      const results = await Promise.all(filesToProcess.map(f => analyzeImageFile(f)));
+      results.forEach(res => {
+        if (res.hasFood && res.detectedIngredients) {
+          detectedIngs.push(...res.detectedIngredients);
+        }
+      });
+      detectedIngs = Array.from(new Set(detectedIngs));
     }
 
     const querySubject = userPrompt || (detectedIngs.length > 0 ? detectedIngs.join(', ') : 'Paneer Tikka');
@@ -76,7 +85,7 @@ export async function queryDualAiModel({ userPrompt, attachedFile, conversationH
     };
   }
 
-  // Call Real Google Gemini API with 5s AbortController timeout
+  // Call Real Google Gemini API with 8s AbortController timeout
   try {
     const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${apiKey}`;
 
@@ -84,25 +93,27 @@ export async function queryDualAiModel({ userPrompt, attachedFile, conversationH
 User Profile context:
 - Name: ${userProfile?.name || 'User'}
 - Goal: ${userProfile?.goal || 'Muscle Gain'} (Daily Protein Target: ${userProfile?.dailyProteinGoal || 130}g)
-- Dietary Preference: ${userProfile?.dietary || 'Vegetarian'} (CRITICAL: Strictly enforce 100% vegetarian/vegan recipes if dietary is Vegetarian/Vegan!)
+- Dietary Preference: ${userProfile?.dietary || 'Vegetarian'}
 - Region / Country: ${userProfile?.nation || 'India 🇮🇳'}
 
-Provide a warm, detailed, accurate response. If ingredients or dishes are asked, format ingredients clearly with protein counts.`;
+Provide a warm, detailed, accurate response. Format ingredients clearly with protein counts.`;
 
     const contentsParts = [];
 
-    // Attach Image if present
-    if (attachedFile) {
-      const mimeType = attachedFile.type || 'image/jpeg';
-      const base64Data = await fileToBase64(attachedFile);
+    // Attach multiple images if present
+    if (filesToProcess.length > 0) {
+      for (const fileItem of filesToProcess) {
+        const mimeType = fileItem.type || 'image/jpeg';
+        const base64Data = await fileToBase64(fileItem);
+        contentsParts.push({
+          inline_data: {
+            mime_type: mimeType,
+            data: base64Data
+          }
+        });
+      }
       contentsParts.push({
-        inline_data: {
-          mime_type: mimeType,
-          data: base64Data
-        }
-      });
-      contentsParts.push({
-        text: `Analyze this image and identify all food ingredients or dishes present. User prompt: "${userPrompt || 'Suggest recipes with these scanned ingredients'}"`
+        text: `Analyze these ${filesToProcess.length} image(s) carefully. Identify all food ingredients or dishes present across ALL photos. User prompt: "${userPrompt || 'Suggest recipes with these scanned ingredients'}"`
       });
     } else {
       contentsParts.push({
@@ -110,9 +121,9 @@ Provide a warm, detailed, accurate response. If ingredients or dishes are asked,
       });
     }
 
-    // Set 5 second timeout using AbortController to prevent hanging UI
+    // Set 8 second timeout using AbortController
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 5000);
+    const timeoutId = setTimeout(() => controller.abort(), 8000);
 
     let response;
     try {

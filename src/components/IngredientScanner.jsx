@@ -24,12 +24,41 @@ export default function IngredientScanner({
     setTextInput('');
   };
 
-  // Handle Image Upload & Analysis
-  const handleImageFileChange = async (file) => {
-    if (!file) return;
-    const objectUrl = URL.createObjectURL(file);
-    setPreviewImage(objectUrl);
-    await processImageAnalysis(file);
+  // Handle Multiple Image Upload & Analysis
+  const handleImageFileChange = async (filesList) => {
+    if (!filesList || filesList.length === 0) return;
+    const files = Array.from(filesList).filter(f => f.type.startsWith('image/'));
+    if (files.length === 0) return;
+
+    setIsScanning(true);
+    setScanResult(null);
+
+    const previews = files.map(f => URL.createObjectURL(f));
+    setPreviewImage(previews[0]);
+
+    const results = await Promise.all(files.map(f => analyzeIngredientImage(f)));
+    let allDetected = [];
+    results.forEach(res => {
+      if (res.hasFood && res.detectedIngredients) {
+        allDetected.push(...res.detectedIngredients);
+      }
+    });
+
+    const uniqueDetected = Array.from(new Set(allDetected.map(i => typeof i === 'string' ? i : i.name))).filter(Boolean);
+    setIsScanning(false);
+    
+    setScanResult({
+      success: true,
+      hasFood: uniqueDetected.length > 0,
+      detectedCount: uniqueDetected.length,
+      detectedIngredients: uniqueDetected.map(name => ({ name, label: name, confidence: 0.95 }))
+    });
+
+    if (uniqueDetected.length > 0) {
+      uniqueDetected.forEach(item => {
+        onAddIngredient(item);
+      });
+    }
   };
 
   const handleSelectPresetImage = async (preset) => {
@@ -49,7 +78,7 @@ export default function IngredientScanner({
     // Auto add detected ingredients to user pantry
     if (result && result.detectedIngredients) {
       result.detectedIngredients.forEach(item => {
-        onAddIngredient(item.name);
+        onAddIngredient(typeof item === 'string' ? item : item.name);
       });
     }
   };
@@ -107,7 +136,8 @@ export default function IngredientScanner({
               <input
                 type="file"
                 accept="image/*"
-                onChange={(e) => handleImageFileChange(e.target.files[0])}
+                multiple
+                onChange={(e) => handleImageFileChange(e.target.files)}
                 className="absolute inset-0 opacity-0 cursor-pointer z-20"
               />
 

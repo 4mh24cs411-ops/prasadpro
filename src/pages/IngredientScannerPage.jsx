@@ -80,7 +80,7 @@ export default function IngredientScannerPage() {
   const [generatorInputText, setGeneratorInputText] = useState('');
 
   const [promptText, setPromptText] = useState('');
-  const [attachedImage, setAttachedImage] = useState(null);
+  const [attachedImages, setAttachedImages] = useState([]);
   const [isDragging, setIsDragging] = useState(false);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
 
@@ -254,66 +254,76 @@ export default function IngredientScannerPage() {
   const handleDrop = (e) => {
     e.preventDefault();
     setIsDragging(false);
-    const file = e.dataTransfer.files[0];
-    if (file && file.type.startsWith('image/')) {
-      attachFile(file);
+    const files = Array.from(e.dataTransfer.files).filter(f => f.type.startsWith('image/'));
+    if (files.length > 0) {
+      attachFiles(files);
     } else {
-      addToast('Please drop a valid image file (JPG, PNG, WEBP)', 'error');
+      addToast('Please drop valid image files (JPG, PNG, WEBP)', 'error');
     }
   };
 
   const handleFileSelect = (e) => {
-    const file = e.target.files[0];
-    if (file) {
-      attachFile(file);
+    const files = Array.from(e.target.files).filter(f => f.type.startsWith('image/'));
+    if (files.length > 0) {
+      attachFiles(files);
     }
   };
 
-  const attachFile = async (file) => {
-    const previewUrl = URL.createObjectURL(file);
-    setAttachedImage({ file, previewUrl, name: file.name });
-    addToast(`🔍 FitGen AI Vision scanning image: ${file.name}...`, 'info');
+  const attachFiles = async (filesList) => {
+    const files = Array.from(filesList).filter(f => f.type.startsWith('image/'));
+    if (files.length === 0) return;
 
+    addToast(`🔍 FitGen AI Vision scanning ${files.length} photo(s)...`, 'info');
     setIsAnalyzing(true);
-    try {
-      const res = await analyzeImageFile(file);
-      const detectedIngs = res.detectedIngredients || [];
 
-      // Check if image contains actual food/ingredients
-      if (!res.hasFood || detectedIngs.length === 0) {
+    try {
+      const results = await Promise.all(files.map(f => analyzeImageFile(f)));
+      let allDetectedIngs = [];
+
+      results.forEach((res) => {
+        if (res.hasFood && res.detectedIngredients && res.detectedIngredients.length > 0) {
+          allDetectedIngs.push(...res.detectedIngredients);
+        }
+      });
+
+      const uniqueDetectedIngs = Array.from(new Set(allDetectedIngs.map(i => i.toLowerCase().trim()))).filter(Boolean);
+
+      const imagePreviews = files.map(file => ({
+        previewUrl: URL.createObjectURL(file),
+        name: file.name
+      }));
+
+      if (uniqueDetectedIngs.length === 0) {
         const userMsg = {
           id: `msg-user-${Date.now()}`,
           sender: 'user',
-          text: `Uploaded image: "${file.name}"`,
-          imagePreview: previewUrl,
-          imageName: file.name
+          text: `Uploaded ${files.length} photo(s): ${files.map(f => `"${f.name}"`).join(', ')}`,
+          imagePreviews: imagePreviews
         };
 
         const aiReply = {
           id: `msg-ai-${Date.now()}`,
           sender: 'ai',
-          text: `⚠️ **No Food or Ingredients Detected in Photo**\n\nFitGen AI Computer Vision scanned your uploaded image ("${file.name}"), but **did not detect any food items, raw ingredients, or dishes**.\n\nPlease upload or capture a clear photo showing food, fruits, vegetables, pantry items, or cooked meals!`,
+          text: `⚠️ **No Food Ingredients Detected in Uploaded Photos**\n\nFitGen AI Computer Vision scanned **${files.length} photo(s)**, but did not detect any food items, raw produce, or dishes in the uploaded pictures.\n\nPlease upload or snap clear photos of food, fruits, vegetables, pantry items, or cooked meals!`,
           ingredientRecommendations: [],
           relevantVideos: []
         };
 
         setMessages((prev) => [...prev, userMsg, aiReply]);
-        addToast(`No food items detected in photo!`, 'info');
+        addToast(`No food items detected in uploaded photos!`, 'info');
         return;
       }
 
-      // Real food items WERE detected!
-      // Add ONLY those detected ingredients to user pantry state:
-      detectedIngs.forEach((ing) => addIngredient(ing));
-      setSelectedPantryIngs(prev => Array.from(new Set([...prev, ...detectedIngs])));
+      // Add ALL detected ingredients across all images to user pantry state:
+      uniqueDetectedIngs.forEach((ing) => addIngredient(ing));
+      setSelectedPantryIngs(prev => Array.from(new Set([...prev, ...uniqueDetectedIngs])));
 
-      const querySubject = detectedIngs.join(', ');
+      const querySubject = uniqueDetectedIngs.join(', ');
       const userMsg = {
         id: `msg-user-${Date.now()}`,
         sender: 'user',
-        text: `Uploaded photo: "${file.name}". Identified ingredients: ${querySubject}`,
-        imagePreview: previewUrl,
-        imageName: file.name
+        text: `Uploaded ${files.length} photo(s): ${files.map(f => `"${f.name}"`).join(', ')}.\nCombined identified ingredients: **${querySubject}**`,
+        imagePreviews: imagePreviews
       };
 
       const dishRecommendations = getDishRecommendationsFromAvailableIngredients(querySubject, userProfile);
@@ -322,19 +332,19 @@ export default function IngredientScannerPage() {
       const aiReply = {
         id: `msg-ai-${Date.now()}`,
         sender: 'ai',
-        text: `✨ **FitGen AI Computer Vision Analysis Complete**!\nIdentified **${detectedIngs.length} food item(s)** in photo "${file.name}": **${detectedIngs.join(', ')}**.\n\nBased ONLY on these detected ingredients, here are realistic recommended fitness recipes tailored for your **${userProfile.nation || 'India 🇮🇳'}** preference and **${userProfile.goal}** target:`,
+        text: `✨ **FitGen Multi-Photo Computer Vision Analysis Complete**!\nScanned **${files.length} picture(s)** and identified **${uniqueDetectedIngs.length} total food item(s)** across all photos: **${uniqueDetectedIngs.join(', ')}**.\n\nBased on ALL ingredients detected across your uploaded photos, here are recommended fitness recipes tailored for your **${userProfile.nation || 'India 🇮🇳'}** preference and **${userProfile.goal}** target:`,
         ingredientRecommendations: dishRecommendations,
         relevantVideos: relevantVideos.slice(0, 2),
-        rawFile: file
+        rawFiles: files
       };
 
       setMessages((prev) => [...prev, userMsg, aiReply]);
-      addToast(`Identified ${detectedIngs.length} food items from photo!`, 'success');
+      addToast(`Identified ${uniqueDetectedIngs.length} food items across ${files.length} photos!`, 'success');
     } catch (err) {
-      console.error("Error analyzing image ingredients:", err);
+      console.error("Error analyzing multiple images:", err);
     } finally {
       setIsAnalyzing(false);
-      setAttachedImage(null);
+      setAttachedImages([]);
       if (fileInputRef.current) fileInputRef.current.value = '';
     }
   };
@@ -387,8 +397,12 @@ export default function IngredientScannerPage() {
     }, 700);
   };
 
-  const removeAttachment = () => {
-    setAttachedImage(null);
+  const removeAttachment = (indexToRemove = null) => {
+    if (typeof indexToRemove === 'number') {
+      setAttachedImages((prev) => prev.filter((_, idx) => idx !== indexToRemove));
+    } else {
+      setAttachedImages([]);
+    }
     setOcrConfirmModal(null);
     if (fileInputRef.current) fileInputRef.current.value = '';
   };
@@ -423,7 +437,10 @@ export default function IngredientScannerPage() {
     if (isAnalyzing) return;
     const queryToUse = overrideText || promptText;
 
-    if (!queryToUse.trim() && !attachedImage) return;
+    const currentAttachedList = attachedImages;
+    const currentText = queryToUse;
+
+    if (!currentText.trim() && currentAttachedList.length === 0) return;
 
     if (overrideText) {
       setActiveSuggestion(overrideText.toLowerCase().trim());
@@ -436,20 +453,23 @@ export default function IngredientScannerPage() {
       setActiveMode('chat');
     }
 
-    const currentAttached = attachedImage;
-    const currentText = queryToUse;
-
     setPromptText('');
-    setAttachedImage(null);
+    setAttachedImages([]);
     if (fileInputRef.current) fileInputRef.current.value = '';
     setIsAnalyzing(true);
+
+    const imagePreviews = currentAttachedList.map(item => ({
+      previewUrl: item.previewUrl,
+      name: item.name
+    }));
 
     const userMsg = {
       id: `msg-user-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
       sender: 'user',
       text: currentText,
-      imagePreview: currentAttached ? currentAttached.previewUrl : null,
-      imageName: currentAttached ? currentAttached.name : null
+      imagePreviews: imagePreviews.length > 0 ? imagePreviews : null,
+      imagePreview: imagePreviews.length === 1 ? imagePreviews[0].previewUrl : null,
+      imageName: imagePreviews.length === 1 ? imagePreviews[0].name : null
     };
 
     // Instantly append user message to chat UI
@@ -457,9 +477,14 @@ export default function IngredientScannerPage() {
 
     try {
       let detectedIngs = [];
-      if (currentAttached) {
-        const res = await analyzeImageFile(currentAttached.file);
-        detectedIngs = res.detectedIngredients || [];
+      if (currentAttachedList.length > 0) {
+        const results = await Promise.all(currentAttachedList.map(item => analyzeImageFile(item.file)));
+        results.forEach(res => {
+          if (res.hasFood && res.detectedIngredients) {
+            detectedIngs.push(...res.detectedIngredients);
+          }
+        });
+        detectedIngs = Array.from(new Set(detectedIngs));
         detectedIngs.forEach((ing) => addIngredient(ing));
       }
 
@@ -486,7 +511,7 @@ export default function IngredientScannerPage() {
       try {
         botResponse = await queryDualAiModel({
           userPrompt: currentText,
-          attachedFile: currentAttached ? currentAttached.file : null,
+          attachedFiles: currentAttachedList.map(item => item.file),
           conversationHistory: messages,
           userProfile: effectiveUserProfile
         });
@@ -589,6 +614,7 @@ export default function IngredientScannerPage() {
         ref={fileInputRef}
         type="file"
         accept="image/*"
+        multiple
         onChange={handleFileSelect}
         className="hidden"
       />
@@ -737,11 +763,19 @@ export default function IngredientScannerPage() {
                       : 'bg-slate-900/90 border border-slate-800 text-slate-200 rounded-tl-none shadow-xl'
                   }`}
                 >
-                  {msg.imagePreview && (
+                  {msg.imagePreviews && msg.imagePreviews.length > 0 ? (
+                    <div className={`mb-3 grid gap-2 ${msg.imagePreviews.length === 1 ? 'grid-cols-1' : msg.imagePreviews.length === 2 ? 'grid-cols-2' : 'grid-cols-2 sm:grid-cols-3'}`}>
+                      {msg.imagePreviews.map((imgItem, idx) => (
+                        <div key={idx} className="relative rounded-2xl overflow-hidden border border-slate-800 h-36 sm:h-44">
+                          <img src={imgItem.previewUrl} alt={imgItem.name || 'Attached'} className="w-full h-full object-cover" />
+                        </div>
+                      ))}
+                    </div>
+                  ) : msg.imagePreview ? (
                     <div className="mb-3 rounded-2xl overflow-hidden border border-slate-800 max-h-52">
                       <img src={msg.imagePreview} alt={msg.imageName || 'Attached'} className="w-full object-cover max-h-52" />
                     </div>
-                  )}
+                  ) : null}
 
                   <div className="flex items-start justify-between gap-3">
                     <p className="flex-1 whitespace-pre-wrap">{renderFormattedText(msg.text)}</p>
@@ -1391,16 +1425,21 @@ export default function IngredientScannerPage() {
       {/* Floating Prompt Bar - ChatGPT Style */}
       <div className="py-4 bg-[#0F172A]/95 backdrop-blur-2xl border-t border-slate-800/80 sticky bottom-0 z-20">
         <div className="max-w-4xl mx-auto space-y-2 px-4">
-          {attachedImage && (
-            <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-slate-900 border border-emerald-500/40 text-xs text-emerald-300 w-fit animate-in slide-in-from-bottom-2">
-              <ImageIcon className="w-3.5 h-3.5 text-emerald-400" />
-              <span className="truncate max-w-xs font-semibold">{attachedImage.name}</span>
-              <button
-                onClick={removeAttachment}
-                className="p-0.5 rounded-md hover:bg-slate-800 text-slate-400 hover:text-rose-400 transition-colors"
-              >
-                <X className="w-3.5 h-3.5" />
-              </button>
+          {attachedImages.length > 0 && (
+            <div className="flex flex-wrap items-center gap-2">
+              {attachedImages.map((imgItem, idx) => (
+                <div key={idx} className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-slate-900 border border-emerald-500/40 text-xs text-emerald-300 w-fit animate-in slide-in-from-bottom-2">
+                  <ImageIcon className="w-3.5 h-3.5 text-emerald-400" />
+                  <span className="truncate max-w-xs font-semibold">{imgItem.name}</span>
+                  <button
+                    type="button"
+                    onClick={() => removeAttachment(idx)}
+                    className="p-0.5 rounded-md hover:bg-slate-800 text-slate-400 hover:text-rose-400 transition-colors"
+                  >
+                    <X className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              ))}
             </div>
           )}
 
@@ -1476,7 +1515,7 @@ export default function IngredientScannerPage() {
 
             <button
               type="submit"
-              disabled={!promptText.trim() && !attachedImage}
+              disabled={!promptText.trim() && attachedImages.length === 0}
               className="p-2.5 rounded-2xl bg-emerald-500 hover:bg-emerald-400 disabled:opacity-30 text-slate-950 font-bold transition-all shadow-md shrink-0 cursor-pointer"
               title="Send Prompt"
             >
