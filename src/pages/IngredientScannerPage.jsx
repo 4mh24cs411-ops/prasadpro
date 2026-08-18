@@ -112,6 +112,15 @@ export default function IngredientScannerPage() {
     }
   }, [location.search]);
 
+  // Handle auto-scan files passed via navigation state (e.g. from Dashboard camera scan)
+  useEffect(() => {
+    if (location.state?.autoScanFiles && location.state.autoScanFiles.length > 0) {
+      setActiveMode('chat');
+      attachFiles(location.state.autoScanFiles);
+      navigate(location.pathname, { replace: true, state: {} });
+    }
+  }, [location.state]);
+
   // Helper to render markdown bold text cleanly
   const renderFormattedText = (text) => {
     if (!text) return null;

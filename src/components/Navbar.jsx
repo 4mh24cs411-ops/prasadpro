@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { NavLink, useNavigate, useLocation } from 'react-router-dom';
 import { useApp } from '../context/AppContext';
 import {
@@ -20,7 +20,9 @@ import {
   LogOut,
   Palette,
   Bot,
-  ChefHat
+  ChefHat,
+  Camera,
+  ImageIcon
 } from 'lucide-react';
 
 export default function Navbar() {
@@ -31,6 +33,15 @@ export default function Navbar() {
   const [showMobileSearch, setShowMobileSearch] = useState(false);
   const navigate = useNavigate();
   const location = useLocation();
+
+  const navCameraInputRef = useRef(null);
+
+  const handleNavPhotoCaptured = (e) => {
+    const files = Array.from(e.target.files).filter(f => f.type.startsWith('image/'));
+    if (files.length > 0) {
+      navigate('/ingredient-scanner', { state: { autoScanFiles: files } });
+    }
+  };
 
   const uncompletedGroceryCount = groceryList.filter((g) => !g.completed).length;
 
@@ -103,16 +114,35 @@ export default function Navbar() {
             </NavLink>
           </div>
 
+          {/* Hidden Navbar Camera Scan Input */}
+          <input
+            ref={navCameraInputRef}
+            type="file"
+            accept="image/*"
+            capture="environment"
+            multiple
+            onChange={handleNavPhotoCaptured}
+            className="hidden"
+          />
+
           {/* Desktop Global Search Bar */}
-          <form onSubmit={handleSearchSubmit} className="relative hidden md:block flex-1 max-w-xs lg:max-w-md mx-4">
+          <form onSubmit={handleSearchSubmit} className="relative hidden md:flex items-center flex-1 max-w-xs lg:max-w-md mx-4">
             <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
             <input
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Search recipes, ingredients, macros..."
-              className="w-full pl-10 pr-4 py-2 text-sm bg-slate-900/90 border border-slate-800 rounded-xl text-slate-200 placeholder-slate-500 focus:outline-none focus:border-[#06B6D4] focus:ring-1 focus:ring-[#06B6D4] transition-all"
+              className="w-full pl-10 pr-11 py-2 text-sm bg-slate-900/90 border border-slate-800 rounded-xl text-slate-200 placeholder-slate-500 focus:outline-none focus:border-[#06B6D4] focus:ring-1 focus:ring-[#06B6D4] transition-all"
             />
+            <button
+              type="button"
+              onClick={() => navCameraInputRef.current?.click()}
+              className="absolute right-2 p-1.5 rounded-lg bg-slate-800/80 hover:bg-[#39FF14] text-slate-300 hover:text-slate-950 transition-all border border-white/5 cursor-pointer group"
+              title="Snap camera photo of ingredients to scan & cook"
+            >
+              <Camera className="w-3.5 h-3.5 text-[#39FF14] group-hover:text-slate-950" />
+            </button>
           </form>
 
           {/* Right Header Actions */}

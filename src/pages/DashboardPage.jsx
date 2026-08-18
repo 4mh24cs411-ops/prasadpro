@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import { useApp } from '../context/AppContext';
 import {
@@ -17,7 +17,10 @@ import {
   ChevronRight,
   Heart,
   Send,
-  ChefHat
+  ChefHat,
+  Camera,
+  ImageIcon,
+  ScanLine
 } from 'lucide-react';
 
 export default function DashboardPage() {
@@ -25,6 +28,15 @@ export default function DashboardPage() {
   const { userProfile, dailyLog, addWater, mealPlan, logMealToTracker } = useApp();
 
   const [kitchenInput, setKitchenInput] = useState('');
+  const cameraInputRef = useRef(null);
+  const galleryInputRef = useRef(null);
+
+  const handlePhotoSelected = (e) => {
+    const files = Array.from(e.target.files).filter(f => f.type.startsWith('image/'));
+    if (files.length > 0) {
+      navigate('/ingredient-scanner', { state: { autoScanFiles: files } });
+    }
+  };
 
   // Time-based greeting helper
   const getGreeting = () => {
@@ -128,25 +140,89 @@ export default function DashboardPage() {
           <ChefHat className="w-40 h-40 text-[#39FF14]" />
         </div>
 
+        {/* Hidden Camera & Gallery File Inputs */}
+        <input
+          ref={cameraInputRef}
+          type="file"
+          accept="image/*"
+          capture="environment"
+          onChange={handlePhotoSelected}
+          className="hidden"
+        />
+        <input
+          ref={galleryInputRef}
+          type="file"
+          accept="image/*"
+          multiple
+          onChange={handlePhotoSelected}
+          className="hidden"
+        />
+
         <div className="relative z-10 space-y-4">
-          <div className="flex items-center gap-2">
-            <span className="p-2 rounded-xl bg-[#39FF14]/15 border border-[#39FF14]/30 text-[#39FF14]">
-              <Sparkles className="w-5 h-5" />
-            </span>
-            <div>
-              <h2 className="text-lg font-bold font-heading text-white">What's in your kitchen today?</h2>
-              <p className="text-xs text-slate-400">Tell FitGen AI your ingredients and receive a personalized recipe matching your goal and diet!</p>
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div className="flex items-center gap-2">
+              <span className="p-2 rounded-xl bg-[#39FF14]/15 border border-[#39FF14]/30 text-[#39FF14]">
+                <Sparkles className="w-5 h-5" />
+              </span>
+              <div>
+                <h2 className="text-lg font-bold font-heading text-white">What's in your kitchen today?</h2>
+                <p className="text-xs text-slate-400">Tell FitGen AI your ingredients or scan your fridge photo to generate recipes!</p>
+              </div>
+            </div>
+
+            {/* Quick Camera & Photo Scanner Action Buttons */}
+            <div className="flex items-center gap-2 shrink-0">
+              <button
+                type="button"
+                onClick={() => cameraInputRef.current?.click()}
+                className="px-3 py-1.5 rounded-xl bg-[#39FF14]/15 hover:bg-[#39FF14] text-[#39FF14] hover:text-slate-950 border border-[#39FF14]/40 text-xs font-extrabold transition-all flex items-center gap-1.5 cursor-pointer shadow-md group"
+                title="Open Camera & Snap Photo of Ingredients"
+              >
+                <Camera className="w-4 h-4 text-[#39FF14] group-hover:text-slate-950" />
+                <span>Camera Scan</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => galleryInputRef.current?.click()}
+                className="px-3 py-1.5 rounded-xl bg-[#00CFFF]/15 hover:bg-[#00CFFF] text-[#00CFFF] hover:text-slate-950 border border-[#00CFFF]/40 text-xs font-extrabold transition-all flex items-center gap-1.5 cursor-pointer shadow-md group"
+                title="Upload Photo(s) of Ingredients from Gallery"
+              >
+                <ImageIcon className="w-4 h-4 text-[#00CFFF] group-hover:text-slate-950" />
+                <span>Upload Photo</span>
+              </button>
             </div>
           </div>
 
           <form onSubmit={handleGenerateRecipeSubmit} className="flex flex-col sm:flex-row gap-3">
-            <input
-              type="text"
-              value={kitchenInput}
-              onChange={(e) => setKitchenInput(e.target.value)}
-              placeholder="e.g. paneer, tomato, onion, beans, cabbage"
-              className="flex-1 px-4 py-3.5 glass-input text-sm text-white placeholder-slate-500 rounded-2xl focus:ring-2 focus:ring-[#39FF14]/50 border border-white/10"
-            />
+            <div className="relative flex-1 flex items-center">
+              <input
+                type="text"
+                value={kitchenInput}
+                onChange={(e) => setKitchenInput(e.target.value)}
+                placeholder="e.g. paneer, tomato, onion, beans, cabbage"
+                className="w-full pl-4 pr-24 py-3.5 glass-input text-sm text-white placeholder-slate-500 rounded-2xl focus:ring-2 focus:ring-[#39FF14]/50 border border-white/10"
+              />
+              <div className="absolute right-2 flex items-center gap-1">
+                <button
+                  type="button"
+                  onClick={() => cameraInputRef.current?.click()}
+                  className="p-2 rounded-xl bg-slate-800/80 hover:bg-[#39FF14] text-slate-300 hover:text-slate-950 transition-all border border-white/10 flex items-center gap-1 text-xs font-bold shadow-md cursor-pointer group"
+                  title="Snap Camera Photo"
+                >
+                  <Camera className="w-4 h-4 text-[#39FF14] group-hover:text-slate-950" />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => galleryInputRef.current?.click()}
+                  className="p-2 rounded-xl bg-slate-800/80 hover:bg-[#00CFFF] text-slate-300 hover:text-slate-950 transition-all border border-white/10 flex items-center gap-1 text-xs font-bold shadow-md cursor-pointer group"
+                  title="Upload Gallery Photo"
+                >
+                  <ImageIcon className="w-4 h-4 text-[#00CFFF] group-hover:text-slate-950" />
+                </button>
+              </div>
+            </div>
+
             <button
               type="submit"
               className="px-6 py-3.5 bg-[#39FF14] hover:bg-[#39FF14]/90 text-slate-950 font-extrabold rounded-2xl text-xs uppercase tracking-wider shadow-lg shadow-[#39FF14]/20 flex items-center justify-center gap-2 cursor-pointer transition-all active:scale-95 whitespace-nowrap"
