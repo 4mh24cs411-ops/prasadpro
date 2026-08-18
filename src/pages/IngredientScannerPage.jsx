@@ -85,6 +85,7 @@ export default function IngredientScannerPage() {
   const [isAnalyzing, setIsAnalyzing] = useState(false);
 
   const fileInputRef = useRef(null);
+  const promptCameraInputRef = useRef(null);
   const chatBottomRef = useRef(null);
   const recognitionRef = useRef(null);
   const [isSpeaking, setIsSpeaking] = useState(false);
@@ -623,6 +624,15 @@ export default function IngredientScannerPage() {
         ref={fileInputRef}
         type="file"
         accept="image/*"
+        multiple
+        onChange={handleFileSelect}
+        className="hidden"
+      />
+      <input
+        ref={promptCameraInputRef}
+        type="file"
+        accept="image/*"
+        capture="environment"
         multiple
         onChange={handleFileSelect}
         className="hidden"
@@ -1489,8 +1499,8 @@ export default function IngredientScannerPage() {
             <button
               type="button"
               onClick={() => fileInputRef.current?.click()}
-              className="p-2.5 rounded-2xl text-slate-400 hover:text-emerald-400 hover:bg-slate-800/60 transition-all shrink-0"
-              title="Attach dish photo (+)"
+              className="p-2.5 rounded-2xl text-slate-400 hover:text-emerald-400 hover:bg-slate-800/60 transition-all shrink-0 cursor-pointer"
+              title="Attach single or multiple ingredient photos (+)"
             >
               <Plus className="w-5 h-5" />
             </button>
@@ -1508,6 +1518,16 @@ export default function IngredientScannerPage() {
               placeholder={isListening ? "Listening... Speak your dish name (e.g. 'Samosa')..." : "Ask FitGen AI for any dish (e.g. 'Samosa', 'Chicken Tikka', 'Fruit Bowl')..."}
               className="flex-1 bg-transparent px-3 py-2 text-sm text-slate-100 placeholder-slate-500 focus:outline-none"
             />
+
+            {/* Camera Scanner Button right beside the mic button */}
+            <button
+              type="button"
+              onClick={() => promptCameraInputRef.current?.click()}
+              className="p-2.5 rounded-2xl text-slate-400 hover:text-emerald-400 hover:bg-slate-800/60 transition-all shrink-0 mr-1 cursor-pointer group"
+              title="Snap camera photo of ingredients 📷"
+            >
+              <Camera className="w-5 h-5 text-emerald-400 group-hover:scale-110 transition-transform" />
+            </button>
 
             <button
               type="button"
