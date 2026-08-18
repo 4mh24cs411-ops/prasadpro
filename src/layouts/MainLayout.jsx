@@ -1,6 +1,7 @@
 import React from 'react';
 import { Outlet, Navigate } from 'react-router-dom';
 import Navbar from '../components/Navbar';
+import MobileBottomNav from '../components/MobileBottomNav';
 import { useApp } from '../context/AppContext';
 import { CheckCircle2, AlertCircle, Info, X } from 'lucide-react';
 
@@ -19,13 +20,16 @@ export default function MainLayout() {
 
       {/* Main Content Area Wrapper */}
       <div className="flex flex-col flex-1 min-w-0">
-        <main className="flex-1 p-4 sm:p-6 lg:p-8 max-w-7xl w-full mx-auto animate-in fade-in duration-300">
+        <main className="flex-1 p-3 sm:p-6 lg:p-8 pb-24 md:pb-8 max-w-7xl w-full mx-auto animate-in fade-in duration-300">
           <Outlet />
         </main>
       </div>
 
+      {/* Mobile Bottom Navigation Bar (Visible on mobile/tablet screens < md) */}
+      <MobileBottomNav />
+
       {/* Toast Notification Container */}
-      <div className="fixed bottom-6 right-6 z-50 flex flex-col gap-2 max-w-md w-full px-4 pointer-events-none">
+      <div className="fixed bottom-20 md:bottom-6 right-3 sm:right-6 z-50 flex flex-col gap-2 max-w-md w-[calc(100%-1.5rem)] sm:w-full pointer-events-none">
         {toasts.map((toast) => (
           <div
             key={toast.id}
@@ -55,3 +59,4 @@ export default function MainLayout() {
     </div>
   );
 }
+

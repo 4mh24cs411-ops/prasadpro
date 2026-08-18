@@ -85,7 +85,7 @@ export default function LoginPage() {
       <div className="particle-glow w-64 h-64 bg-[#39FF14]/10 top-[40%] right-[15%]" style={{ animationDelay: '4s' }} />
 
       {/* Main Glass Card */}
-      <div className="relative z-10 w-full max-w-md glass-card p-8 md:p-10 rounded-[20px] shadow-2xl transition-all duration-500 animate-fadeIn border border-white/10 hover:border-white/15 my-4">
+      <div className="relative z-10 w-full max-w-md glass-card p-5 sm:p-8 md:p-10 rounded-[20px] shadow-2xl transition-all duration-500 animate-fadeIn border border-white/10 hover:border-white/15 my-4">
         
         {/* Unique FitGen Logo Emblem Badge */}
         <div className="flex flex-col items-center text-center mb-6">

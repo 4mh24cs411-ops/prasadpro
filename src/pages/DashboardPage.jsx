@@ -105,16 +105,16 @@ export default function DashboardPage() {
             </p>
           </div>
 
-          <div className="flex flex-wrap items-center gap-3">
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 w-full md:w-auto">
             <NavLink
               to="/ingredient-scanner"
-              className="px-5 py-3 rounded-2xl bg-[#39FF14] hover:bg-[#39FF14]/90 text-slate-950 font-extrabold text-sm flex items-center gap-2 shadow-lg shadow-[#39FF14]/25 transition-transform active:scale-95"
+              className="px-5 py-3 rounded-2xl bg-[#39FF14] hover:bg-[#39FF14]/90 text-slate-950 font-extrabold text-sm flex items-center justify-center gap-2 shadow-lg shadow-[#39FF14]/25 transition-transform active:scale-95 text-center"
             >
               <ChefHat className="w-4 h-4" /> AI Kitchen Assistant
             </NavLink>
             <NavLink
               to="/meal-planner"
-              className="px-5 py-3 rounded-2xl bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 font-semibold text-sm flex items-center gap-2 transition-all"
+              className="px-5 py-3 rounded-2xl bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 font-semibold text-sm flex items-center justify-center gap-2 transition-all text-center"
             >
               <Sparkles className="w-4 h-4 text-[#00CFFF]" /> 7-Day Meal Plan
             </NavLink>

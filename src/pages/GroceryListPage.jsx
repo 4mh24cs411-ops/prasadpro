@@ -90,11 +90,11 @@ export default function GroceryListPage() {
           </p>
         </div>
 
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center gap-2 sm:gap-3 w-full md:w-auto">
           {completedCount > 0 && (
             <button
               onClick={clearCompletedGrocery}
-              className="px-4 py-2.5 rounded-xl bg-slate-900 border border-slate-800 hover:border-slate-700 text-slate-300 text-xs font-semibold transition-colors"
+              className="flex-1 sm:flex-none px-4 py-2.5 rounded-xl bg-slate-900 border border-slate-800 hover:border-slate-700 text-slate-300 text-xs font-semibold transition-colors flex items-center justify-center"
             >
               Clear Completed ({completedCount})
             </button>
@@ -102,7 +102,7 @@ export default function GroceryListPage() {
 
           <button
             onClick={handleDownloadPDF}
-            className="px-4 py-2.5 rounded-xl bg-blue-500 hover:bg-blue-400 text-slate-950 font-bold text-sm flex items-center gap-2 shadow-lg shadow-blue-500/25 transition-transform active:scale-95"
+            className="flex-1 sm:flex-none px-4 py-2.5 rounded-xl bg-blue-500 hover:bg-blue-400 text-slate-950 font-bold text-xs sm:text-sm flex items-center justify-center gap-2 shadow-lg shadow-blue-500/25 transition-transform active:scale-95"
           >
             <Download className="w-4 h-4" /> Export PDF
           </button>

@@ -28,6 +28,7 @@ export default function Navbar() {
   const [searchQuery, setSearchQuery] = useState('');
   const [showThemeDropdown, setShowThemeDropdown] = useState(false);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [showMobileSearch, setShowMobileSearch] = useState(false);
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -38,6 +39,7 @@ export default function Navbar() {
     if (searchQuery.trim()) {
       navigate(`/ingredient-scanner?search=${encodeURIComponent(searchQuery.trim())}`);
       setIsMenuOpen(false);
+      setShowMobileSearch(false);
       setSearchQuery('');
     }
   };
@@ -72,9 +74,9 @@ export default function Navbar() {
     <>
       <header className="sticky top-0 z-30 bg-[#0A0A0A]/95 backdrop-blur-xl border-b border-white/10 shadow-2xl">
         {/* Top Header Row */}
-        <div className="px-4 lg:px-8 h-16 flex items-center justify-between gap-4">
+        <div className="px-3 sm:px-4 lg:px-8 h-16 flex items-center justify-between gap-2 sm:gap-4">
           {/* Left: Hamburger Menu Trigger & Brand Logo */}
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 sm:gap-3 shrink-0">
             <button
               onClick={() => setIsMenuOpen(!isMenuOpen)}
               className="p-2 rounded-xl bg-slate-900 border border-slate-800 hover:border-[#06B6D4]/40 text-slate-300 hover:text-[#06B6D4] transition-all flex items-center justify-center group shadow-sm cursor-pointer"
@@ -83,26 +85,26 @@ export default function Navbar() {
               <Menu className="w-5 h-5 group-hover:scale-110 transition-transform text-[#06B6D4]" />
             </button>
 
-            <NavLink to="/dashboard" className="flex items-center gap-2.5 group">
-              <div className="relative group transition-transform duration-300 group-hover:scale-105">
+            <NavLink to="/dashboard" className="flex items-center gap-2 group">
+              <div className="relative group transition-transform duration-300 group-hover:scale-105 shrink-0">
                 <div className="absolute -inset-0.5 rounded-xl bg-gradient-to-r from-[#06B6D4] to-[#3B82F6] opacity-75 blur-sm group-hover:opacity-100 transition duration-300" />
                 <img
                   src="/assets/fitgen_logo.png"
                   alt="FitGen Logo"
-                  className="relative w-9 h-9 rounded-xl object-cover border border-white/20 shadow-lg bg-[#0A0A0A]"
+                  className="relative w-8 h-8 sm:w-9 sm:h-9 rounded-xl object-cover border border-white/20 shadow-lg bg-[#0A0A0A]"
                 />
               </div>
-              <div>
-                <span className="text-lg font-bold font-heading bg-gradient-to-r from-white via-slate-100 to-[#06B6D4] bg-clip-text text-transparent">
-                  FitGen <span className="text-[#06B6D4] text-[10px] px-1.5 py-0.5 rounded bg-[#06B6D4]/15 border border-[#06B6D4]/30 font-extrabold">PRO</span>
+              <div className="block">
+                <span className="text-base sm:text-lg font-bold font-heading bg-gradient-to-r from-white via-slate-100 to-[#06B6D4] bg-clip-text text-transparent flex items-center gap-1">
+                  FitGen <span className="text-[#06B6D4] text-[9px] sm:text-[10px] px-1.5 py-0.5 rounded bg-[#06B6D4]/15 border border-[#06B6D4]/30 font-extrabold">PRO</span>
                 </span>
-                <p className="text-[9px] text-slate-400 font-medium tracking-wide">SMART NUTRITION</p>
+                <p className="text-[8px] sm:text-[9px] text-slate-400 font-medium tracking-wide hidden xs:block">SMART NUTRITION</p>
               </div>
             </NavLink>
           </div>
 
-          {/* Global Search Bar */}
-          <form onSubmit={handleSearchSubmit} className="relative hidden md:block w-72 lg:w-96">
+          {/* Desktop Global Search Bar */}
+          <form onSubmit={handleSearchSubmit} className="relative hidden md:block flex-1 max-w-xs lg:max-w-md mx-4">
             <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
             <input
               type="text"
@@ -114,11 +116,20 @@ export default function Navbar() {
           </form>
 
           {/* Right Header Actions */}
-          <div className="flex items-center gap-2.5 sm:gap-4">
+          <div className="flex items-center gap-1.5 sm:gap-3 shrink-0">
+            {/* Mobile Search Button Toggle */}
+            <button
+              onClick={() => setShowMobileSearch(!showMobileSearch)}
+              className="md:hidden p-2 rounded-xl text-slate-400 hover:text-white hover:bg-slate-800 transition-colors cursor-pointer"
+              title="Search recipes"
+            >
+              <Search className="w-5 h-5 text-[#06B6D4]" />
+            </button>
+
             {/* Quick AI Shortcut */}
             <NavLink
               to="/ingredient-scanner"
-              className="hidden sm:flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-gradient-to-r from-[#06B6D4]/20 to-emerald-500/20 border border-[#06B6D4]/40 text-[#06B6D4] hover:bg-[#06B6D4]/30 text-xs font-extrabold transition-all group shadow-sm"
+              className="hidden lg:flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-gradient-to-r from-[#06B6D4]/20 to-emerald-500/20 border border-[#06B6D4]/40 text-[#06B6D4] hover:bg-[#06B6D4]/30 text-xs font-extrabold transition-all group shadow-sm"
               title="Unified FitGen AI & Recipe Generator"
             >
               <Bot className="w-4 h-4 text-[#06B6D4] group-hover:scale-110 transition-transform" />
@@ -213,6 +224,30 @@ export default function Navbar() {
             </button>
           </div>
         </div>
+
+        {/* Expandable Mobile Search Bar */}
+        {showMobileSearch && (
+          <div className="md:hidden px-4 pb-3 pt-1 border-t border-slate-800/80 animate-in slide-in-from-top-2 duration-200">
+            <form onSubmit={handleSearchSubmit} className="relative w-full">
+              <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="Search recipes, ingredients, macros..."
+                className="w-full pl-10 pr-10 py-2.5 text-xs bg-slate-900 border border-slate-800 rounded-xl text-slate-200 placeholder-slate-500 focus:outline-none focus:border-[#06B6D4]"
+                autoFocus
+              />
+              <button
+                type="button"
+                onClick={() => setShowMobileSearch(false)}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </form>
+          </div>
+        )}
       </header>
 
       {/* Hamburger Menu Overlay Drawer */}
