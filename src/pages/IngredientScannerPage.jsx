@@ -1519,12 +1519,12 @@ export default function IngredientScannerPage() {
               className="flex-1 bg-transparent px-3 py-2 text-sm text-slate-100 placeholder-slate-500 focus:outline-none"
             />
 
-            {/* Camera Scanner Button right beside the mic button */}
+            {/* Camera Scanner Button right beside the mic button (Shown ONLY on mobile phones/tablets) */}
             <button
               type="button"
               onClick={() => promptCameraInputRef.current?.click()}
-              className="p-2.5 rounded-2xl text-slate-400 hover:text-emerald-400 hover:bg-slate-800/60 transition-all shrink-0 mr-1 cursor-pointer group"
-              title="Snap camera photo of ingredients 📷"
+              className="p-2.5 rounded-2xl text-slate-400 hover:text-emerald-400 hover:bg-slate-800/60 transition-all shrink-0 mr-1 cursor-pointer group md:hidden"
+              title="Snap camera photo of ingredients (Mobile Only) 📷"
             >
               <Camera className="w-5 h-5 text-emerald-400 group-hover:scale-110 transition-transform" />
             </button>

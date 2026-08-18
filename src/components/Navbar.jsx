@@ -138,8 +138,8 @@ export default function Navbar() {
             <button
               type="button"
               onClick={() => navCameraInputRef.current?.click()}
-              className="absolute right-2 p-1.5 rounded-lg bg-slate-800/80 hover:bg-[#39FF14] text-slate-300 hover:text-slate-950 transition-all border border-white/5 cursor-pointer group"
-              title="Snap camera photo of ingredients to scan & cook"
+              className="absolute right-2 p-1.5 rounded-lg bg-slate-800/80 hover:bg-[#39FF14] text-slate-300 hover:text-slate-950 transition-all border border-white/5 cursor-pointer group md:hidden"
+              title="Snap camera photo of ingredients (Mobile Only)"
             >
               <Camera className="w-3.5 h-3.5 text-[#39FF14] group-hover:text-slate-950" />
             </button>

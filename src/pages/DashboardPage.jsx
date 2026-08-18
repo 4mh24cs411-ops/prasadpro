@@ -175,8 +175,8 @@ export default function DashboardPage() {
               <button
                 type="button"
                 onClick={() => cameraInputRef.current?.click()}
-                className="px-3 py-1.5 rounded-xl bg-[#39FF14]/15 hover:bg-[#39FF14] text-[#39FF14] hover:text-slate-950 border border-[#39FF14]/40 text-xs font-extrabold transition-all flex items-center gap-1.5 cursor-pointer shadow-md group"
-                title="Open Camera & Snap Photo of Ingredients"
+                className="px-3 py-1.5 rounded-xl bg-[#39FF14]/15 hover:bg-[#39FF14] text-[#39FF14] hover:text-slate-950 border border-[#39FF14]/40 text-xs font-extrabold transition-all flex items-center gap-1.5 cursor-pointer shadow-md group md:hidden"
+                title="Open Camera & Snap Photo of Ingredients (Mobile Only)"
               >
                 <Camera className="w-4 h-4 text-[#39FF14] group-hover:text-slate-950" />
                 <span>Camera Scan</span>
@@ -207,8 +207,8 @@ export default function DashboardPage() {
                 <button
                   type="button"
                   onClick={() => cameraInputRef.current?.click()}
-                  className="p-2 rounded-xl bg-slate-800/80 hover:bg-[#39FF14] text-slate-300 hover:text-slate-950 transition-all border border-white/10 flex items-center gap-1 text-xs font-bold shadow-md cursor-pointer group"
-                  title="Snap Camera Photo"
+                  className="p-2 rounded-xl bg-slate-800/80 hover:bg-[#39FF14] text-slate-300 hover:text-slate-950 transition-all border border-white/10 flex items-center gap-1 text-xs font-bold shadow-md cursor-pointer group md:hidden"
+                  title="Snap Camera Photo (Mobile Only)"
                 >
                   <Camera className="w-4 h-4 text-[#39FF14] group-hover:text-slate-950" />
                 </button>
