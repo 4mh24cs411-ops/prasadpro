@@ -272,14 +272,38 @@ export default function IngredientScannerPage() {
   const attachFile = async (file) => {
     const previewUrl = URL.createObjectURL(file);
     setAttachedImage({ file, previewUrl, name: file.name });
-    addToast(`🔍 FitGen AI Vision scanning ingredients in: ${file.name}...`, 'info');
+    addToast(`🔍 FitGen AI Vision scanning image: ${file.name}...`, 'info');
 
     setIsAnalyzing(true);
     try {
       const res = await analyzeImageFile(file);
-      const detectedIngs = res.detectedIngredients || ['tomato', 'paneer', 'onion', 'potato', 'peas', 'rice', 'curd'];
+      const detectedIngs = res.detectedIngredients || [];
 
-      // Add to pantry state
+      // Check if image contains actual food/ingredients
+      if (!res.hasFood || detectedIngs.length === 0) {
+        const userMsg = {
+          id: `msg-user-${Date.now()}`,
+          sender: 'user',
+          text: `Uploaded image: "${file.name}"`,
+          imagePreview: previewUrl,
+          imageName: file.name
+        };
+
+        const aiReply = {
+          id: `msg-ai-${Date.now()}`,
+          sender: 'ai',
+          text: `⚠️ **No Food or Ingredients Detected in Photo**\n\nFitGen AI Computer Vision scanned your uploaded image ("${file.name}"), but **did not detect any food items, raw ingredients, or dishes**.\n\nPlease upload or capture a clear photo showing food, fruits, vegetables, pantry items, or cooked meals!`,
+          ingredientRecommendations: [],
+          relevantVideos: []
+        };
+
+        setMessages((prev) => [...prev, userMsg, aiReply]);
+        addToast(`No food items detected in photo!`, 'info');
+        return;
+      }
+
+      // Real food items WERE detected!
+      // Add ONLY those detected ingredients to user pantry state:
       detectedIngs.forEach((ing) => addIngredient(ing));
       setSelectedPantryIngs(prev => Array.from(new Set([...prev, ...detectedIngs])));
 
@@ -298,14 +322,14 @@ export default function IngredientScannerPage() {
       const aiReply = {
         id: `msg-ai-${Date.now()}`,
         sender: 'ai',
-        text: `✨ **FitGen AI Computer Vision Analysis Complete**!\nIdentified **${detectedIngs.length} ingredients** in photo "${file.name}": **${detectedIngs.join(', ')}**.\nBased ONLY on these detected ingredients, here are realistic recommended fitness recipes tailored for your **${userProfile.nation || 'India 🇮🇳'}** preference and **${userProfile.goal}** target:`,
+        text: `✨ **FitGen AI Computer Vision Analysis Complete**!\nIdentified **${detectedIngs.length} food item(s)** in photo "${file.name}": **${detectedIngs.join(', ')}**.\n\nBased ONLY on these detected ingredients, here are realistic recommended fitness recipes tailored for your **${userProfile.nation || 'India 🇮🇳'}** preference and **${userProfile.goal}** target:`,
         ingredientRecommendations: dishRecommendations,
         relevantVideos: relevantVideos.slice(0, 2),
         rawFile: file
       };
 
       setMessages((prev) => [...prev, userMsg, aiReply]);
-      addToast(`Identified ${detectedIngs.length} ingredients from photo!`, 'success');
+      addToast(`Identified ${detectedIngs.length} food items from photo!`, 'success');
     } catch (err) {
       console.error("Error analyzing image ingredients:", err);
     } finally {
